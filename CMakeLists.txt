@@ -8,6 +8,8 @@ find_package(Qt6 REQUIRED COMPONENTS Quick)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
+add_subdirectory(external/spdlog)
+
 qt_add_executable(appModdingLexicon
     main.cpp
 )
@@ -31,7 +33,9 @@ set_target_properties(appModdingLexicon PROPERTIES
 )
 
 target_link_libraries(appModdingLexicon
-    PRIVATE Qt6::Quick
+    PRIVATE
+    Qt6::Quick
+    spdlog::spdlog
 )
 
 include(GNUInstallDirs)
