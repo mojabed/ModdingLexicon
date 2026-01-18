@@ -1,5 +1,10 @@
 #pragma once
 
+#include <QString>
+#include <QDateTime>
+#include <QUrl>
+#include <QStringList>
+
 struct Dependencies {
     QString path;
     QString addOnVersion;
