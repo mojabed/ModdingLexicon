@@ -4,6 +4,7 @@
 #include <QMutexLocker>
 #include <QString>
 
+// Singleton class for managing user paths for ESO and for the Lexicon app
 class Pathing {
 public:
     Pathing(const Pathing& obj) = delete;

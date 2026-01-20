@@ -10,6 +10,7 @@
 
 void static setupSpdlog() {
     try {
+        // Two sinks for output to file and visual studio output console
         auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("lexicon.log", true);
         auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
 
@@ -45,6 +46,7 @@ int main(int argc, char *argv[])
     engine.loadFromModule("ModdingLexicon", "Main");
 
     setupSpdlog();
+    spdlog::info("Application started.");
 
     return app.exec();
 }
