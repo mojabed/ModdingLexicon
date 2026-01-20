@@ -11,19 +11,19 @@ public:
     Pathing& operator=(const Pathing&) = delete;
 
     static Pathing* getInstance() {
-        if (paths == nullptr) {
+        if (instance == nullptr) {
             QMutexLocker locker(&mtx);
-            if (paths == nullptr) {
-                paths = new Pathing();
+            if (instance == nullptr) {
+                instance = new Pathing();
             }
         }
-        return paths;
+        return instance;
     }
 
     QString getPaths();
 
 private:
-    static Pathing* paths;
+    static Pathing* instance;
     static QMutex mtx;
 
     QString docsPath, addonsPath, appConfigPath, appDataPath;
