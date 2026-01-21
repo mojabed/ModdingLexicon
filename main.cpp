@@ -1,5 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQuickStyle>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
