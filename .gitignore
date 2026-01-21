@@ -55,3 +55,7 @@ compile_commands.json
 /.vs
 /build/Desktop_Qt_6_10_1_MSVC2022_64bit-Debug
 /out/build/debug
+/DarkCustomTitleBar.qml
+/CustomTitleBar.qml
+/MainWithThemeExample.qml
+/MenuBar.qml
