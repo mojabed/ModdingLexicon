@@ -1,23 +1,11 @@
 #pragma once
 
-class Lexicon {
+class LexiconQO : public QObject {
+    Q_OBJECT
 public:
-    Lexicon(const Lexicon& obj) = delete;
-    Lexicon& operator=(const Lexicon&) = delete;
+    explicit LexiconQO(QObject* parent = nullptr) : QObject(parent) {}
 
-    static Lexicon* getInstance() {
-        if (instance == nullptr) {
-            QMutexLocker locker(&mtx);
-            if (instance == nullptr) {
-                instance = new Lexicon();
-            }
-        }
-        return instance;
-    }
+signals:
 
-private:
-    static Lexicon* instance;
-    static QMutex mtx;
-
-    Lexicon() {}
+public slots:
 };

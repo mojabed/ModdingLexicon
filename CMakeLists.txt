@@ -4,6 +4,8 @@ project(ModdingLexicon VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_AUTORCC ON)
+
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -13,16 +15,19 @@ add_subdirectory(external/spdlog)
 # Add your source files
 set(PROJECT_SOURCES
     src/pathing.cpp
+    src/lexicon.cpp
 )
 
 # Add your headers
 set(PROJECT_HEADERS
     include/pathing.h
     include/ModType.h
+    include/lexicon.h
 )
 
 qt_add_executable(appModdingLexicon
     main.cpp
+    resources/Fonts.qrc
 )
 
 qt_add_qml_module(appModdingLexicon
