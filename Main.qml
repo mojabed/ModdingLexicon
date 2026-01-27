@@ -21,7 +21,6 @@ ApplicationWindow {
         width: parent.width
         height: parent.height * 0.15
         contentHeight: parent.height * 0.15
-        //topPadding: 15
 
         background: Rectangle {
             color: "#232323"
@@ -33,7 +32,6 @@ ApplicationWindow {
         TabButton {
             id: myAddonsTab
             text: qsTr("My Addons")
-            
         }
         TabButton {
             id: browseAddonsTab

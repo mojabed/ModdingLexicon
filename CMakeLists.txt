@@ -16,6 +16,7 @@ add_subdirectory(external/spdlog)
 set(PROJECT_SOURCES
     src/pathing.cpp
     src/lexicon.cpp
+    src/parser.cpp
 )
 
 # Add your headers
@@ -23,6 +24,7 @@ set(PROJECT_HEADERS
     include/pathing.h
     include/ModType.h
     include/lexicon.h
+    include/parser.h
 )
 
 qt_add_executable(appModdingLexicon
