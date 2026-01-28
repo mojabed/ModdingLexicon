@@ -7,6 +7,8 @@ ApplicationWindow {
     height: 480
     visible: true
     title: qsTr("Modding Lexicon")
+    minimumWidth: 640   
+    minimumHeight: 480
 
     Material.theme: Material.Dark
     Material.accent: Material.DeepPurple
@@ -32,6 +34,7 @@ ApplicationWindow {
         TabButton {
             id: myAddonsTab
             text: qsTr("My Addons")
+            
         }
         TabButton {
             id: browseAddonsTab

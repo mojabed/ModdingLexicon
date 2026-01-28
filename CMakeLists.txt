@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -27,9 +27,12 @@ set(PROJECT_HEADERS
     include/parser.h
 )
 
+set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/resources/lexicon.rc")
+
 qt_add_executable(appModdingLexicon
     main.cpp
     resources/Fonts.qrc
+    ${app_icon_resource_windows}
 )
 
 qt_add_qml_module(appModdingLexicon
