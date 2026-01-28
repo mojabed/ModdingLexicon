@@ -12,14 +12,12 @@ qt_standard_project_setup(REQUIRES 6.8)
 
 add_subdirectory(external/spdlog)
 
-# Add your source files
 set(PROJECT_SOURCES
     src/pathing.cpp
     src/lexicon.cpp
     src/parser.cpp
 )
 
-# Add your headers
 set(PROJECT_HEADERS
     include/pathing.h
     include/ModType.h
@@ -43,7 +41,6 @@ qt_add_qml_module(appModdingLexicon
     DEPENDENCIES QtQuick
 )
 
-# Add include directory
 target_include_directories(appModdingLexicon
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include

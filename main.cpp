@@ -37,6 +37,8 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
+    //qmlRegisterType<ModModel>("Lexicon.Network", 1, 0, "ModModel");
+
     QQmlApplicationEngine engine;
     QObject::connect(
         &engine,
