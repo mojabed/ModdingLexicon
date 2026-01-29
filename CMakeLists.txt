@@ -16,6 +16,7 @@ set(PROJECT_SOURCES
     src/pathing.cpp
     src/lexicon.cpp
     src/parser.cpp
+    src/HttpClient.cpp
 )
 
 set(PROJECT_HEADERS
@@ -23,12 +24,15 @@ set(PROJECT_HEADERS
     include/ModType.h
     include/lexicon.h
     include/parser.h
+    include/HttpClient.h
 )
 
 set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/resources/lexicon.rc")
 
 qt_add_executable(appModdingLexicon
     main.cpp
+    ${PROJECT_SOURCES}
+    ${PROJECT_HEADERS}
     resources/Fonts.qrc
     ${app_icon_resource_windows}
 )
@@ -63,6 +67,7 @@ target_link_libraries(appModdingLexicon
     PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
+    Qt6::Network
     spdlog::spdlog
 )
 

@@ -1,6 +1,9 @@
+#include "lexicon.h"
+
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QQmlContext>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -36,20 +39,32 @@ void static setupSpdlog() {
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-
-    //qmlRegisterType<ModModel>("Lexicon.Network", 1, 0, "ModModel");
-
-    QQmlApplicationEngine engine;
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
-    engine.loadFromModule("ModdingLexicon", "Main");
+    app.setOrganizationName("ModdingLexicon");
+    app.setOrganizationDomain("moddinglexicon.com");
+    app.setApplicationName("ModdingLexicon");
 
     setupSpdlog();
+
+    LexiconQO lexicon;
+
+    QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty("lexicon", &lexicon);
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+        &app, [&lexicon](QObject* obj, const QUrl& objUrl) {
+            if (!obj) {
+                spdlog::error("Failed to load QML component from: {}", objUrl.toString().toStdString());
+                QCoreApplication::exit(-1);
+                return;
+            }
+            
+            lexicon.updateMasterList(); // auto-update on startup
+        }, Qt::QueuedConnection);
+
+    engine.loadFromModule("ModdingLexicon", "Main");
     spdlog::info("Application started.");
 
-    return app.exec();
+    int result = app.exec();
+    spdlog::info("Application exiting with code: {}", result);
+    return result;
 }

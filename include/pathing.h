@@ -31,5 +31,6 @@ private:
     bool doesExist(const QString& path);
     bool isWritable(const QString& path);
 
-    Pathing() {}
+    Pathing();
+    ~Pathing();
 };
