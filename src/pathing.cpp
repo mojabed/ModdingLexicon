@@ -10,24 +10,24 @@ QMutex Pathing::mtx;
 
 Pathing::Pathing() {
     // Paths for Elder Scrolls Online
-    docsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    addonsPath = docsPath + "/Elder Scrolls Online/live/AddOns";
+    m_paths.docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    m_paths.addons = m_paths.docs + "/Elder Scrolls Online/live/AddOns";
     // Paths for Modding Lexicon 
-    appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    appConfigPath = appDataPath + "/config";
+    m_paths.appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    m_paths.appConfig = m_paths.appData + "/config";
 
     spdlog::info("Pathing initialized:");
-    spdlog::info("  Documents Path: {}", docsPath.toStdString());
-    spdlog::info("  Addons Path: {}", addonsPath.toStdString());
-    spdlog::info("  App Data Path: {}", appDataPath.toStdString());
-    spdlog::info("  App Config Path: {}", appConfigPath.toStdString());
+    spdlog::info("  Documents Path: {}", m_paths.docs.toStdString());
+    spdlog::info("  Addons Path: {}", m_paths.addons.toStdString());
+    spdlog::info("  App Data Path: {}", m_paths.appData.toStdString());
+    spdlog::info("  App Config Path: {}", m_paths.appConfig.toStdString());
 }
 
 Pathing::~Pathing() {}
 
 QString Pathing::getPaths() {
     return QString("Docs: %1\nAddons: %2\nAppData: %3\nAppConfig: %4")
-        .arg(docsPath, addonsPath, appDataPath, appConfigPath);
+        .arg(m_paths.docs, m_paths.addons, m_paths.appData, m_paths.appConfig);
 }
 
 bool Pathing::doesExist(const QString& path) {

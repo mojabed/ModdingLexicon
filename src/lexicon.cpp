@@ -1,12 +1,13 @@
 #include "lexicon.h"
 #include "HttpClient.h"
+#include "pathing.h"
 
 #include <spdlog/spdlog.h>
 #include <QStandardPaths>
 #include <QDir>
 
-LexiconQO::LexiconQO(QObject* parent) : QObject(parent) {
-    m_httpClient = new HttpClient(1, this);
+Lexicon::Lexicon(QObject* parent) : QObject(parent) {
+    m_httpClient = new HttpClient(6, this);
 
     connect(m_httpClient, &HttpClient::downloadFinished, this, [this](const QString& filePath) {
         spdlog::info("Master list updated: {}", filePath.toStdString());
@@ -19,12 +20,12 @@ LexiconQO::LexiconQO(QObject* parent) : QObject(parent) {
         });
 }
 
-LexiconQO::~LexiconQO() {}
+Lexicon::~Lexicon() {}
 
-void LexiconQO::updateMasterList() {
+void Lexicon::updateMasterList() {
     QUrl url("https://api.mmoui.com/v4/game/ESO/filelist.json");
 
-    QString appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QString appData = Pathing::getInstance()->paths().appData;
     QDir().mkpath(appData);
     QString targetPath = appData + "/filelist.json";
 

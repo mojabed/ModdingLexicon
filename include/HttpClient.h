@@ -27,7 +27,7 @@ public:
     ~HttpClient();
 
     Q_INVOKABLE void addDownload(const QUrl& url, const QString& filePath);
-    void setMaxConcurrentDownloads(int max);
+    //void setMaxConcurrentDownloads(int max);
 
     int activeDownloads() const;
 
