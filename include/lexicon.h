@@ -4,11 +4,11 @@
 
 class HttpClient;
 
-class LexiconQO : public QObject {
+class Lexicon : public QObject {
     Q_OBJECT
 public:
-    explicit LexiconQO(QObject* parent = nullptr);
-    ~LexiconQO();
+    explicit Lexicon(QObject* parent = nullptr);
+    ~Lexicon();
 
     Q_INVOKABLE void updateMasterList();
 signals:

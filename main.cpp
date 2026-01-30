@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     setupSpdlog();
 
-    LexiconQO lexicon;
+    Lexicon lexicon;
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("lexicon", &lexicon);
