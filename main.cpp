@@ -62,9 +62,7 @@ int main(int argc, char *argv[])
         }, Qt::QueuedConnection);
 
     engine.loadFromModule("ModdingLexicon", "Main");
-    spdlog::info("Application started.");
 
     int result = app.exec();
-    spdlog::info("Application exiting with code: {}", result);
     return result;
 }
