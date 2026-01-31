@@ -22,7 +22,9 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
 Lexicon::~Lexicon() {}
 
-void Lexicon::updateMasterList() {
+
+// The master list contains all ESO addons that are hosted on ESOUI
+void Lexicon::updateMasterList() { // Served by the MMOUI API
     QUrl url("https://api.mmoui.com/v4/game/ESO/filelist.json");
 
     QString appData = Pathing::getInstance()->paths().appData;
