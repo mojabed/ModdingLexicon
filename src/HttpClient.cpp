@@ -20,6 +20,11 @@ void HttpClient::addDownload(const QUrl& url, const QString& filePath) {
         emit downloadFailed(filePath, "Invalid URL");
         return;
     }
+    if (filePath.isEmpty()) {
+        spdlog::error("Empty file path provided for URL: {}", url.toString().toStdString());
+        emit downloadFailed(filePath, "Empty file path");
+        return;
+    }
 
     {
         QMutexLocker locker(&m_mutex);
