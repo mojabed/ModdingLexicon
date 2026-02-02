@@ -11,10 +11,13 @@ public:
     ~Lexicon();
 
     Q_INVOKABLE void updateMasterList();
+    void parseMasterList();
 signals:
     void masterListReady(const QString& filePath);
     void downloadError(const QString& message);
 
 private:
     HttpClient* m_httpClient;
+
+    QString m_masterListPath;
 };
