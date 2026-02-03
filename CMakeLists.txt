@@ -17,6 +17,7 @@ set(PROJECT_SOURCES
     src/lexicon.cpp
     src/parser.cpp
     src/HttpClient.cpp
+    src/AddonModel.cpp
 )
 
 set(PROJECT_HEADERS
@@ -25,6 +26,7 @@ set(PROJECT_HEADERS
     include/lexicon.h
     include/parser.h
     include/HttpClient.h
+    include/AddonModel.h
 )
 
 set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/resources/lexicon.rc")
