@@ -19,6 +19,8 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
         spdlog::error("Failed to update master list: {}", error.toStdString());
         emit downloadError(error);
     });
+
+    updateMasterList();
 }
 
 Lexicon::~Lexicon() {}
