@@ -44,6 +44,9 @@ qt_add_qml_module(appModdingLexicon
     VERSION 1.0
     QML_FILES
         Main.qml
+    SOURCES
+        include/lexicon.h
+        src/lexicon.cpp
     DEPENDENCIES QtQuick
 )
 
