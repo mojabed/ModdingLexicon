@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     Lexicon lexicon;
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("lexicon", &lexicon);
+    //engine.rootContext()->setContextProperty("lexicon", &lexicon);
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
         &app, [&lexicon](QObject* obj, const QUrl& objUrl) {
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
                 return;
             }
             
-            lexicon.updateMasterList(); // auto-update on startup
+            //lexicon.updateMasterList(); // auto-update on startup
         }, Qt::QueuedConnection);
 
     engine.loadFromModule("ModdingLexicon", "Main");
