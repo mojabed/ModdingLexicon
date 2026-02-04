@@ -39,9 +39,6 @@ void static setupSpdlog() {
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-    app.setOrganizationName("ModdingLexicon");
-    app.setOrganizationDomain("moddinglexicon.com");
-    app.setApplicationName("ModdingLexicon");
 
     setupSpdlog();
 
