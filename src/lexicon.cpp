@@ -1,10 +1,11 @@
-#include "lexicon.h"
-#include "HttpClient.h"
-#include "pathing.h"
-
 #include <spdlog/spdlog.h>
 #include <QStandardPaths>
 #include <QDir>
+
+#include "lexicon.h"
+#include "HttpClient.h"
+#include "pathing.h"
+#include "parser.h"
 
 Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     m_httpClient = new HttpClient(6, this);
@@ -38,6 +39,26 @@ void Lexicon::updateMasterList() { // Served by the MMOUI API
     m_httpClient->addDownload(url, m_masterListPath);
 }
 
-void Lexicon::parseMasterList() {
 
+// Calls the parser to read the master list JSON and populate the mods list
+void Lexicon::parseMasterList() {
+    spdlog::info("Parsing master list from: {}", m_masterListPath.toStdString());
+    QFile file(m_masterListPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        spdlog::error("Failed to open master list file for parsing: {}", m_masterListPath.toStdString());
+        return;
+    }
+    QByteArray jsonData = file.readAll();
+    file.close();
+
+    m_mods = Parser::parseEsoMods(jsonData);
+
+    // Test output
+    /*for (const auto& mod : m_mods) {
+        spdlog::info("Mod: {} by {} (Version: {})", mod.title.toStdString(), mod.author.toStdString(), mod.version.toStdString());
+
+        for (const auto& addon : mod.addons) {
+            spdlog::info(" Addon: {} (version: {})", addon.path.toStdString(), addon.addOnVersion.toStdString());
+        }
+    }*/
 }
