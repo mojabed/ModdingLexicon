@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QtQml>
 
+#include "ModType.h"
+
 class HttpClient;
 
 class Lexicon : public QObject {
@@ -25,4 +27,5 @@ private:
     void parseMasterList();
 
     QString m_masterListPath;
+    QList<ModInfo> m_mods;
 };
