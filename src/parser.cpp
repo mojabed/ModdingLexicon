@@ -197,9 +197,11 @@ QList<ModInfo> Parser::parseEsoMods(const QByteArray& jsonData) {
         return mods;
     }
 
+
+    //const QJsonValue& value : modsJsonArray
     QJsonArray modsJsonArray = document.array();
-    for (const QJsonValue& value : modsJsonArray) {
-        mods.append(fromEsoJson(value.toObject()));
+    for (int i = 1; i < modsJsonArray.size(); ++i) {
+        mods.append(fromEsoJson(modsJsonArray[i].toObject()));
     }
     return mods;
 }
