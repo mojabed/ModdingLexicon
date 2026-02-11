@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QtQml>
+#include <QDateTime>
 
 #include "ModType.h"
 
@@ -29,7 +30,9 @@ private:
     AddonModel* m_addonModel;
 
     void updateMasterList();
+    void checkMasterListUpdate();
     void parseMasterList();
+    bool loadCachedMasterList();
 
     QString m_masterListPath;
     QList<ModInfo> m_mods;

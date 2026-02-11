@@ -5,6 +5,7 @@
 #include <QMap>
 #include <QRecursiveMutex>
 #include <QUrl>
+#include <QDateTime>
 #include <QtQml/qqmlregistration.h>
 
 QT_BEGIN_NAMESPACE
@@ -27,6 +28,7 @@ public:
     ~HttpClient();
 
     Q_INVOKABLE void addDownload(const QUrl& url, const QString& filePath);
+    Q_INVOKABLE void checkRemoteFileDate(const QUrl& url);
     //void setMaxConcurrentDownloads(int max);
 
     int activeDownloads() const;
@@ -37,10 +39,12 @@ signals:
     void downloadFailed(const QString& filePath, const QString& errorString);
     void allDownloadsFinished();
     void activeDownloadsChanged();
+    void remoteFileDateChecked(const QUrl& url, const QDateTime& lastModified, bool success);
 
 private slots:
     void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void onReplyFinished();
+    void onHeadRequestFinished();
 
 private:
     struct Download {
