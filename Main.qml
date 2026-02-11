@@ -80,4 +80,39 @@ ApplicationWindow {
             font.family: rcFont.font.family
         }
     }
+
+    ListView {
+        id: addonListView
+        anchors.top: statusBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 10
+        
+        model: lexicon.addonModel
+        spacing: 5
+        clip: true
+        
+        delegate: Rectangle {
+            width: addonListView.width
+            height: 40
+            color: "#2a2a2a"
+            radius: 4
+            
+            Text {
+                anchors.fill: parent
+                anchors.margins: 10
+                text: title + " by " + author
+                color: "white"
+                font.family: rcFont.font.family
+                font.pixelSize: 12
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+        }
+        
+        ScrollBar.vertical: ScrollBar {
+            policy: ScrollBar.AsNeeded
+        }
+    }
 }

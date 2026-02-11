@@ -65,6 +65,32 @@ QVariant AddonModel::data(const QModelIndex& index, int role) const {
     }
 }
 
+QHash<int, QByteArray> AddonModel::roleNames() const {
+    QHash<int, QByteArray> roles;
+    roles[IdRole] = "modId";
+    roles[CategoryIdRole] = "categoryId";
+    roles[TitleRole] = "title";
+    roles[AuthorRole] = "author";
+    roles[VersionRole] = "version";
+    roles[LastUpdateRole] = "lastUpdate";
+    roles[LastUpdatedRole] = "lastUpdated";
+    roles[FileInfoUriRole] = "fileInfoUri";
+    roles[GameVersionsRole] = "gameVersions";
+    roles[ChecksumRole] = "checksum";
+    roles[LibraryRole] = "library";
+    roles[DonationUrlRole] = "donationUrl";
+    roles[IsInstalledRole] = "isInstalled";
+    roles[InstallPathRole] = "installPath";
+    roles[SizeInBytesRole] = "sizeInBytes";
+    roles[DownloadUrlRole] = "downloadUrl";
+    roles[DownloadsRole] = "downloads";
+    roles[DownloadsMonthlyRole] = "downloadsMonthly";
+    roles[FavoritesRole] = "favorites";
+    roles[HasUpdateRole] = "hasUpdate";
+    roles[FormattedDateRole] = "formattedDate";
+    return roles;
+}
+
 int AddonModel::count() const {
     return m_mods.count();
 }

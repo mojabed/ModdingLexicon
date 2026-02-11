@@ -6,9 +6,11 @@
 #include "HttpClient.h"
 #include "pathing.h"
 #include "parser.h"
+#include "AddonModel.h"
 
 Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     m_httpClient = new HttpClient(6, this);
+    m_addonModel = new AddonModel(this);
 
     connect(m_httpClient, &HttpClient::downloadFinished, this, [this](const QString& filePath) {
         spdlog::info("Master list updated: {}", filePath.toStdString());
@@ -26,6 +28,9 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
 Lexicon::~Lexicon() {}
 
+AddonModel* Lexicon::addonModel() const {
+    return m_addonModel;
+}
 
 // The master list contains all ESO addons that are hosted on ESOUI
 void Lexicon::updateMasterList() { // Served by the MMOUI API
@@ -50,13 +55,7 @@ void Lexicon::parseMasterList() {
     file.close();
 
     m_mods = Parser::parseEsoMods(jsonData);
+    m_addonModel->setMods(m_mods);
 
-    // Test output
-    /*for (const auto& mod : m_mods) {
-        spdlog::info("Mod: {} by {} (Version: {})", mod.title.toStdString(), mod.author.toStdString(), mod.version.toStdString());
-
-        for (const auto& addon : mod.addons) {
-            spdlog::info(" Addon: {} (version: {})", addon.path.toStdString(), addon.addOnVersion.toStdString());
-        }
-    }*/
+    spdlog::info("Loaded {} mods into model", m_mods.count());
 }
