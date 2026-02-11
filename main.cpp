@@ -56,8 +56,6 @@ int main(int argc, char *argv[])
 
     setupSpdlog();
 
-    //Lexicon lexicon;
-
     QQmlApplicationEngine engine;
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
@@ -68,15 +66,6 @@ int main(int argc, char *argv[])
                 return;
             }
         }, Qt::QueuedConnection);
-
-    /*QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-        &app, [&lexicon](QObject* obj, const QUrl& objUrl) {
-            if (!obj) {
-                spdlog::error("Failed to load QML component from: {}", objUrl.toString().toStdString());
-                QCoreApplication::exit(-1);
-                return;
-            }
-        }, Qt::QueuedConnection);*/
 
     engine.loadFromModule("ModdingLexicon", "Main");
 

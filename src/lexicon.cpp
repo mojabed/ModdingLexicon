@@ -39,8 +39,6 @@ void Lexicon::updateMasterList() { // Served by the MMOUI API
     m_httpClient->addDownload(url, m_masterListPath);
 }
 
-
-// Calls the parser to read the master list JSON and populate the mods list
 void Lexicon::parseMasterList() {
     spdlog::info("Parsing master list from: {}", m_masterListPath.toStdString());
     QFile file(m_masterListPath);
