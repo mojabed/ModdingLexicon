@@ -16,6 +16,8 @@ ApplicationWindow {
     Material.theme: Material.Dark
     Material.accent: Material.DeepPurple
 
+    property bool smoothAnimation: true
+
     FontLoader { // Using Inter font from Google
         id: rcFont
         source: "qrc:/fonts/InterVariable.ttf"
@@ -33,12 +35,13 @@ ApplicationWindow {
     TabBar { // Navigation bar at top
         id: bar
         currentIndex: swipeView.currentIndex
-        //width: parent.width
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: parent.height * 0.15
-        contentHeight: parent.height * 0.15
+        //height: parent.height * 0.15
+        //contentHeight: parent.height * 0.15
+        height: 72
+        contentHeight: 72
 
         background: Rectangle {
             color: "#232323"
@@ -90,45 +93,102 @@ ApplicationWindow {
         anchors.bottom: parent.bottom
         currentIndex: bar.currentIndex
 
-        Item {
-            id: myAddonsPage
-        }
-        Item {
-            id: browseAddonsPage
-            
-            ListView {
-                anchors.fill: parent
-                anchors.margins: 10
-                model: lexicon.addonModel
-                spacing: 5
-                clip: true
-            
-                delegate: Rectangle {
-                    width: ListView.view.width
-                    height: 40
-                    color: "#2a2a2a"
-                    radius: 4
-                
-                    Text {
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        text: title + " by " + author
-                        color: "white"
-                        font.family: rcFont.font.family
-                        font.pixelSize: 12
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
+        interactive: false
+
+        Loader {
+            active: SwipeView.isCurrentItem || SwipeView.isNextItem || SwipeView.isPreviousItem
+            sourceComponent: Item {
+                ListView {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    model: lexicon.installedAddonsFilter
+                    spacing: 5
+                    clip: true
+                    
+                    cacheBuffer: 200
+                    reuseItems: true
+
+                    delegate: Rectangle {
+                        required property string title
+                        required property string author
+                        
+                        width: ListView.view.width
+                        height: 40
+                        color: "#2a2a2a"
+                        radius: 4
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            
+                            text: title + " by " + author
+                            color: "white"
+                            font.family: rcFont.font.family
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+
+                            renderType: Text.NativeRendering
+                            textFormat: Text.PlainText
+                        }
                     }
-                }
-            
-                ScrollBar.vertical: ScrollBar {
-                    policy: ScrollBar.AsNeeded
+
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                    }
                 }
             }
         }
-        Item {
-            id:settingsPage
 
+        // Browse Addons Page
+        Loader {
+            active: SwipeView.isCurrentItem || SwipeView.isNextItem || SwipeView.isPreviousItem
+            sourceComponent: Item {
+                ListView {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    model: lexicon.addonModel
+                    spacing: 5
+                    clip: true
+
+                    cacheBuffer: 200
+                    reuseItems: true
+
+                    delegate: Rectangle {
+                        required property string title
+                        required property string author
+                        
+                        width: ListView.view.width
+                        height: 40
+                        color: "#2a2a2a"
+                        radius: 4
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            
+                            text: `${title} by ${author}`
+                            color: "white"
+                            font.family: rcFont.font.family
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                    }
+                }
+            }
+        }
+
+        // Settings Page
+        Item {
             Text {
                 anchors.centerIn: parent
                 text: "Settings Page"

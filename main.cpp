@@ -6,6 +6,8 @@
 #include <QQuickStyle>
 #include <QQmlContext>
 #include <QDir>
+#include <QQuickWindow>
+#include <QSGRendererInterface>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -50,6 +52,7 @@ void static setupSpdlog() {
 
 int main(int argc, char *argv[])
 {
+    qputenv("QSG_RENDER_LOOP", "basic"); // fixes stutter?
     QGuiApplication app(argc, argv);
 
     app.setApplicationName("ModdingLexicon");

@@ -8,10 +8,15 @@
 #include "pathing.h"
 #include "parser.h"
 #include "AddonModel.h"
+#include "AddonFilterModel.h"
 
 Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     m_httpClient = new HttpClient(6, this);
     m_addonModel = new AddonModel(this);
+    m_installedAddonsFilter = new AddonFilterModel(this);
+
+    m_installedAddonsFilter->setSourceModel(m_addonModel);
+    m_installedAddonsFilter->setShowInstalledOnly(true);
 
     connect(m_httpClient, &HttpClient::downloadFinished, this, [this](const QString& filePath) {
         spdlog::info("Master list updated: {}", filePath.toStdString());
@@ -37,6 +42,10 @@ AddonModel* Lexicon::addonModel() const {
     return m_addonModel;
 }
 
+AddonFilterModel* Lexicon::installedAddonsFilter() const {
+    return m_installedAddonsFilter;
+}
+
 bool Lexicon::loadCachedMasterList() {
     spdlog::info("Loading cached master list from: {}", m_masterListPath.toStdString());
     QFile file(m_masterListPath);
@@ -53,6 +62,7 @@ bool Lexicon::loadCachedMasterList() {
         return false;
     }
 
+    checkInstalledAddons();
     m_addonModel->setMods(m_mods);
     spdlog::info("Loaded {} mods from cache", m_mods.count());
     return true;
@@ -76,7 +86,33 @@ void Lexicon::parseMasterList() {
     file.close();
 
     m_mods = Parser::parseEsoMods(jsonData);
+    checkInstalledAddons();
     m_addonModel->setMods(m_mods);
 
     spdlog::info("Loaded {} mods into model", m_mods.count());
+}
+
+void Lexicon::checkInstalledAddons() {
+    QString addonsPath = Pathing::getInstance()->paths().addons;
+
+    if (addonsPath.isEmpty()) {
+        spdlog::warn("Addons path is empty while checking for installed addons.");
+        return;
+    }
+
+    QDir addonsDir(addonsPath);
+    if (!addonsDir.exists()) {
+        spdlog::warn("Addons directory does not exist: {}", addonsPath.toStdString());
+        return;
+    }
+
+    QStringList installedDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
+    for (ModInfo& mod : m_mods) {
+        if (installedDirs.contains(mod.title, Qt::CaseInsensitive)) {
+            mod.isInstalled = true;
+            mod.installPath = addonsDir.filePath(mod.title);
+            //spdlog::info("Found installed addon: {} at {}", mod.title.toStdString(), mod.installPath.toStdString());
+        }
+    }
 }
