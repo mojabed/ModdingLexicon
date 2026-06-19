@@ -32,6 +32,7 @@ ApplicationWindow {
 
     TabBar { // Navigation bar at top
         id: bar
+        currentIndex: swipeView.currentIndex
         //width: parent.width
         anchors.top: parent.top
         anchors.left: parent.left
@@ -47,16 +48,16 @@ ApplicationWindow {
         font.pixelSize: 20
         font.bold: true
         TabButton {
-            id: myAddonsTab
+            //id: myAddonsTab
             text: qsTr("My Addons")
             
         }
         TabButton {
-            id: browseAddonsTab
+            //id: browseAddonsTab
             text: qsTr("Browse Addons")
         }
         TabButton {
-            id: settingsTab
+            //id: settingsTab
             text: qsTr("Settings")
         }
     }
@@ -81,38 +82,60 @@ ApplicationWindow {
         }
     }
 
-    ListView {
-        id: addonListView
+    SwipeView {
+        id: swipeView
         anchors.top: statusBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 10
-        
-        model: lexicon.addonModel
-        spacing: 5
-        clip: true
-        
-        delegate: Rectangle {
-            width: addonListView.width
-            height: 40
-            color: "#2a2a2a"
-            radius: 4
+        currentIndex: bar.currentIndex
+
+        Item {
+            id: myAddonsPage
+        }
+        Item {
+            id: browseAddonsPage
             
-            Text {
+            ListView {
                 anchors.fill: parent
                 anchors.margins: 10
-                text: title + " by " + author
-                color: "white"
-                font.family: rcFont.font.family
-                font.pixelSize: 12
-                verticalAlignment: Text.AlignVCenter
-                elide: Text.ElideRight
+                model: lexicon.addonModel
+                spacing: 5
+                clip: true
+            
+                delegate: Rectangle {
+                    width: ListView.view.width
+                    height: 40
+                    color: "#2a2a2a"
+                    radius: 4
+                
+                    Text {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        text: title + " by " + author
+                        color: "white"
+                        font.family: rcFont.font.family
+                        font.pixelSize: 12
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+                }
+            
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                }
             }
         }
-        
-        ScrollBar.vertical: ScrollBar {
-            policy: ScrollBar.AsNeeded
+        Item {
+            id:settingsPage
+
+            Text {
+                anchors.centerIn: parent
+                text: "Settings Page"
+                color: "white"
+                font.family: rcFont.font.family
+                font.pixelSize: 16
+            }
         }
     }
 }

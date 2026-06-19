@@ -39,6 +39,10 @@ qt_add_executable(appModdingLexicon
     ${app_icon_resource_windows}
 )
 
+target_compile_definitions(appModdingLexicon PRIVATE 
+    $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>
+)
+
 qt_add_qml_module(appModdingLexicon
     URI ModdingLexicon
     VERSION 1.0
