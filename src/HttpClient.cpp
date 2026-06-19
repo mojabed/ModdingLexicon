@@ -33,56 +33,6 @@ void HttpClient::addDownload(const QUrl& url, const QString& filePath) {
     processDownloadQueue();
 }
 
-void HttpClient::checkRemoteFileDate(const QUrl& url) {
-    if (!url.isValid()) {
-        spdlog::error("Invalid URL provided for HEAD request: {}", url.toString().toStdString());
-        emit remoteFileDateChecked(url, QDateTime(), false);
-        return;
-    }
-
-    spdlog::info("HttpClient: Checking remote file date for {}", url.toString().toStdString());
-
-    QNetworkRequest request = createRequest(url);
-    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
-
-    QNetworkReply* reply = m_networkManager->head(request);
-
-    connect(reply, &QNetworkReply::finished, this, &HttpClient::onHeadRequestFinished);
-}
-
-void HttpClient::onHeadRequestFinished() {
-    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
-    if (!reply) return;
-
-    QUrl url = reply->url();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        spdlog::warn("HEAD request failed for {}: {}",
-            url.toString().toStdString(),
-            reply->errorString().toStdString());
-        emit remoteFileDateChecked(url, QDateTime(), false);
-        reply->deleteLater();
-        return;
-    }
-
-    QDateTime lastModified;
-    if (reply->hasRawHeader("Last-Modified")) {
-        QString lastModifiedStr = QString::fromUtf8(reply->rawHeader("Last-Modified"));
-        lastModified = QDateTime::fromString(lastModifiedStr, Qt::RFC2822Date);
-
-        if (lastModified.isValid()) {
-            spdlog::info("Remote file last modified: {}", lastModified.toString(Qt::ISODate).toStdString());
-        } else {
-            spdlog::warn("Could not parse Last-Modified header: {}", lastModifiedStr.toStdString());
-        }
-    } else {
-        spdlog::warn("No Last-Modified header found for {}", url.toString().toStdString());
-    }
-
-    emit remoteFileDateChecked(url, lastModified, true);
-    reply->deleteLater();
-}
-
 void HttpClient::processDownloadQueue() {
     while (true) {
         Download download;

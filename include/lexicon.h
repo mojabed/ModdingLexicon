@@ -30,7 +30,6 @@ private:
     AddonModel* m_addonModel;
 
     void updateMasterList();
-    void checkMasterListUpdate();
     void parseMasterList();
     bool loadCachedMasterList();
 

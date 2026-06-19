@@ -24,61 +24,17 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
         emit downloadError(error);
     });
 
-    connect(m_httpClient, &HttpClient::remoteFileDateChecked, this,
-        [this](const QUrl& url, const QDateTime& lastModified, bool success) {
-            Q_UNUSED(url);
-
-            if (!success) {
-                spdlog::warn("Failed to check remote file, using cached version if available");
-                if (QFileInfo::exists(m_masterListPath) && loadCachedMasterList()) {
-                    emit masterListReady(m_masterListPath);
-                } else {
-                    updateMasterList();
-                }
-                return;
-            }
-
-            QFileInfo localFile(m_masterListPath);
-
-            if (!localFile.exists()) {
-                spdlog::info("No local file, downloading...");
-                updateMasterList();
-                return;
-            }
-
-            QDateTime localModified = localFile.lastModified();
-            spdlog::info("Local file modified: {}", localModified.toString(Qt::ISODate).toStdString());
-
-            if (lastModified.isValid() && lastModified > localModified) {
-                spdlog::info("Remote file is newer, downloading update...");
-                updateMasterList();
-            } else {
-                spdlog::info("Local file is up to date, using cached version");
-                if (loadCachedMasterList()) {
-                    emit masterListReady(m_masterListPath);
-                } else {
-                    spdlog::warn("Failed to load cached file, downloading fresh copy");
-                    updateMasterList();
-                }
-            }
-        });
-
     QString appData = Pathing::getInstance()->paths().appData;
     QDir().mkpath(appData);
     m_masterListPath = appData + "/filelist.json";
 
-    checkMasterListUpdate();
+    updateMasterList();
 }
 
 Lexicon::~Lexicon() {}
 
 AddonModel* Lexicon::addonModel() const {
     return m_addonModel;
-}
-
-void Lexicon::checkMasterListUpdate() {
-    QUrl url("https://api.mmoui.com/v4/game/ESO/filelist.json");
-    m_httpClient->checkRemoteFileDate(url);
 }
 
 bool Lexicon::loadCachedMasterList() {
