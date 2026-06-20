@@ -2,6 +2,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QFileInfo>
+#include <chrono>
 
 #include "lexicon.h"
 #include "HttpClient.h"
@@ -76,6 +77,8 @@ void Lexicon::updateMasterList() { // Served by the MMOUI API
 }
 
 void Lexicon::parseMasterList() {
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     spdlog::info("Parsing master list from: {}", m_masterListPath.toStdString());
     QFile file(m_masterListPath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -90,9 +93,15 @@ void Lexicon::parseMasterList() {
     m_addonModel->setMods(m_mods);
 
     spdlog::info("Loaded {} mods into model", m_mods.count());
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    spdlog::info("parseMasterList took {}ms", duration.count());
 }
 
 void Lexicon::checkInstalledAddons() {
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     QString addonsPath = Pathing::getInstance()->paths().addons;
 
     if (addonsPath.isEmpty()) {
@@ -115,4 +124,8 @@ void Lexicon::checkInstalledAddons() {
             //spdlog::info("Found installed addon: {} at {}", mod.title.toStdString(), mod.installPath.toStdString());
         }
     }
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    spdlog::info("checkInstalledAddons took {}ms", duration.count());
 }

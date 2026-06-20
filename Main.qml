@@ -6,8 +6,8 @@ import ModdingLexicon
 
 ApplicationWindow {
     id: window
-    width: 640
-    height: 480
+    width: 1280
+    height: 720
     visible: true
     title: qsTr("Modding Lexicon")
     minimumWidth: 640   
@@ -17,10 +17,16 @@ ApplicationWindow {
     Material.accent: Material.DeepPurple
 
     property bool smoothAnimation: true
+    property string appFontFamily: "Inter"
 
     FontLoader { // Using Inter font from Google
         id: rcFont
         source: "qrc:/fonts/InterVariable.ttf"
+        onStatusChanged: {
+            if (status === FontLoader.Ready) {
+                appFontFamily = rcFont.font.family
+    }
+        }
     }
 
     Lexicon {
@@ -47,7 +53,7 @@ ApplicationWindow {
             color: "#232323"
         }
 
-        font.family: rcFont.font.family
+        font.family: appFontFamily
         font.pixelSize: 20
         font.bold: true
         TabButton {
@@ -81,7 +87,7 @@ ApplicationWindow {
             color: "#90EE90"
             text: "Loading master list..."
             font.pixelSize: 14
-            font.family: rcFont.font.family
+            font.family: appFontFamily
         }
     }
 
@@ -105,8 +111,11 @@ ApplicationWindow {
                     spacing: 5
                     clip: true
                     
-                    cacheBuffer: 200
                     reuseItems: true
+
+                    cacheBuffer: 500
+                    displayMarginBeginning: 200
+                    displayMarginEnd: 200
 
                     delegate: Rectangle {
                         required property string title
@@ -126,12 +135,9 @@ ApplicationWindow {
                             
                             text: title + " by " + author
                             color: "white"
-                            font.family: rcFont.font.family
+                        font.family: appFontFamily
                             font.pixelSize: 12
                             elide: Text.ElideRight
-
-                            renderType: Text.NativeRendering
-                            textFormat: Text.PlainText
                         }
                     }
 
@@ -153,8 +159,11 @@ ApplicationWindow {
                     spacing: 5
                     clip: true
 
-                    cacheBuffer: 200
                     reuseItems: true
+
+                    cacheBuffer: 500
+                    displayMarginBeginning: 200
+                    displayMarginEnd: 200
 
                     delegate: Rectangle {
                         required property string title
@@ -172,9 +181,9 @@ ApplicationWindow {
                             anchors.leftMargin: 10
                             anchors.rightMargin: 10
                             
-                            text: `${title} by ${author}`
+                        text: title + " by " + author
                             color: "white"
-                            font.family: rcFont.font.family
+                        font.family: appFontFamily
                             font.pixelSize: 12
                             elide: Text.ElideRight
                         }
@@ -193,7 +202,7 @@ ApplicationWindow {
                 anchors.centerIn: parent
                 text: "Settings Page"
                 color: "white"
-                font.family: rcFont.font.family
+                font.family: appFontFamily
                 font.pixelSize: 16
             }
         }

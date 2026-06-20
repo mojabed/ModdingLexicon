@@ -1,5 +1,6 @@
 #include "AddonFilterModel.h"
 #include "AddonModel.h"
+#include <spdlog/spdlog.h>
 
 AddonFilterModel::AddonFilterModel(QObject* parent)
     : QSortFilterProxyModel(parent) {
