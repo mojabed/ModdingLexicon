@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QtQml>
 #include <QDateTime>
+#include <QFutureWatcher>
 
 #include "ModType.h"
 
@@ -28,6 +29,10 @@ signals:
     void masterListReady(const QString& filePath);
     void downloadError(const QString& message);
 
+private slots:
+    void onParsingFinished();
+    void onInstalledAddonsCheckFinished();
+
 private:
     HttpClient* m_httpClient;
     AddonModel* m_addonModel;
@@ -40,4 +45,7 @@ private:
 
     QString m_masterListPath;
     QList<ModInfo> m_mods;
+    
+    QFutureWatcher<QList<ModInfo>> m_parsingWatcher;
+    QFutureWatcher<void> m_installedCheckWatcher;
 };

@@ -34,7 +34,8 @@ public:
         DownloadsMonthlyRole,
         FavoritesRole,
         HasUpdateRole,
-        FormattedDateRole
+        FormattedDateRole,
+        IconSourceRole
     };
     Q_ENUM(AddonRoles)
 

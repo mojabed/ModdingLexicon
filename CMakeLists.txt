@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network Concurrent)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -41,15 +41,12 @@ qt_add_executable(appModdingLexicon
     ${app_icon_resource_windows}
 )
 
-target_compile_definitions(appModdingLexicon PRIVATE 
-    $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>
-)
-
 qt_add_qml_module(appModdingLexicon
     URI ModdingLexicon
     VERSION 1.0
     QML_FILES
         Main.qml
+        ListItemDelegate.qml
     SOURCES
         include/lexicon.h
         include/AddonModel.h
@@ -81,6 +78,7 @@ target_link_libraries(appModdingLexicon
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::Network
+    Qt6::Concurrent
     spdlog::spdlog
 )
 

@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <chrono>
+#include <QtConcurrent>
 
 #include "lexicon.h"
 #include "HttpClient.h"
@@ -12,12 +13,15 @@
 #include "AddonFilterModel.h"
 
 Lexicon::Lexicon(QObject* parent) : QObject(parent) {
-    m_httpClient = new HttpClient(6, this);
+    m_httpClient = new HttpClient(3, this);
     m_addonModel = new AddonModel(this);
     m_installedAddonsFilter = new AddonFilterModel(this);
 
     m_installedAddonsFilter->setSourceModel(m_addonModel);
     m_installedAddonsFilter->setShowInstalledOnly(true);
+
+    connect(&m_parsingWatcher, &QFutureWatcher<QList<ModInfo>>::finished, this, &Lexicon::onParsingFinished);
+    connect(&m_installedCheckWatcher, &QFutureWatcher<void>::finished, this, &Lexicon::onInstalledAddonsCheckFinished);
 
     connect(m_httpClient, &HttpClient::downloadFinished, this, [this](const QString& filePath) {
         spdlog::info("Master list updated: {}", filePath.toStdString());
@@ -77,23 +81,38 @@ void Lexicon::updateMasterList() { // Served by the MMOUI API
 }
 
 void Lexicon::parseMasterList() {
-    auto startTime = std::chrono::high_resolution_clock::now();
-
     spdlog::info("Parsing master list from: {}", m_masterListPath.toStdString());
-    QFile file(m_masterListPath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        spdlog::error("Failed to open master list file for parsing: {}", m_masterListPath.toStdString());
+    
+    auto parseFuture = QtConcurrent::run([this]() -> QList<ModInfo> {
+        QFile file(m_masterListPath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            spdlog::error("Failed to open master list file for parsing: {}", m_masterListPath.toStdString());
+            return QList<ModInfo>();
+        }
+        QByteArray jsonData = file.readAll();
+        file.close();
+        
+        return Parser::parseEsoMods(jsonData);
+    });
+    
+    m_parsingWatcher.setFuture(parseFuture);
+}
+
+void Lexicon::onParsingFinished() {
+    auto startTime = std::chrono::high_resolution_clock::now();
+    
+    m_mods = m_parsingWatcher.result();
+    
+    if (m_mods.isEmpty()) {
+        spdlog::error("Failed to parse master list or list is empty");
         return;
     }
-    QByteArray jsonData = file.readAll();
-    file.close();
-
-    m_mods = Parser::parseEsoMods(jsonData);
+    
     checkInstalledAddons();
+    
     m_addonModel->setMods(m_mods);
-
     spdlog::info("Loaded {} mods into model", m_mods.count());
-
+    
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     spdlog::info("parseMasterList took {}ms", duration.count());
@@ -102,29 +121,45 @@ void Lexicon::parseMasterList() {
 void Lexicon::checkInstalledAddons() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    QString addonsPath = Pathing::getInstance()->paths().addons;
+    auto checkFuture = QtConcurrent::run([this]() {
+        QString addonsPath = Pathing::getInstance()->paths().addons;
 
-    if (addonsPath.isEmpty()) {
-        spdlog::warn("Addons path is empty while checking for installed addons.");
-        return;
-    }
-
-    QDir addonsDir(addonsPath);
-    if (!addonsDir.exists()) {
-        spdlog::warn("Addons directory does not exist: {}", addonsPath.toStdString());
-        return;
-    }
-
-    QStringList installedDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-
-    for (ModInfo& mod : m_mods) {
-        if (installedDirs.contains(mod.title, Qt::CaseInsensitive)) {
-            mod.isInstalled = true;
-            mod.installPath = addonsDir.filePath(mod.title);
-            //spdlog::info("Found installed addon: {} at {}", mod.title.toStdString(), mod.installPath.toStdString());
+        if (addonsPath.isEmpty()) {
+            spdlog::warn("Addons path is empty while checking for installed addons.");
+            return;
         }
-    }
 
+        QDir addonsDir(addonsPath);
+        if (!addonsDir.exists()) {
+            spdlog::warn("Addons directory does not exist: {}", addonsPath.toStdString());
+            return;
+        }
+
+        QStringList installedDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
+        QSet<QString> installedDirsSet;
+        installedDirsSet.reserve(installedDirs.size());
+        for (const QString& dir : installedDirs) {
+            installedDirsSet.insert(dir.toLower());
+        }
+
+        for (ModInfo& mod : m_mods) {
+            if (installedDirsSet.contains(mod.title.toLower())) {
+                mod.isInstalled = true;
+                mod.installPath = addonsDir.filePath(mod.title);
+            //spdlog::info("Found installed addon: {} at {}", mod.title.toStdString(), mod.installPath.toStdString());
+            }
+        }
+    });
+    
+    m_installedCheckWatcher.setFuture(checkFuture);
+}
+
+void Lexicon::onInstalledAddonsCheckFinished() {
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+    m_addonModel->setMods(m_mods);
+    
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     spdlog::info("checkInstalledAddons took {}ms", duration.count());

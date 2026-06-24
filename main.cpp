@@ -52,8 +52,11 @@ void static setupSpdlog() {
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL); // Fixes stutter on some high dpi monitors (I think anyway)
+    //qputenv("QSG_INFO", "1");
+    //QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+
     QGuiApplication app(argc, argv);
+
 
     app.setApplicationName("ModdingLexicon");
 

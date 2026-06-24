@@ -46,7 +46,15 @@ struct ModInfo {
     int favorites = 0;
     bool hasUpdate = false;
 
+    mutable QString formattedDateCache;
     QString getFormattedDate() const {
-        return lastUpdated.isValid() ? lastUpdated.toString("dd-MM-yyyy") : "";
+        if (formattedDateCache.isEmpty() && lastUpdated.isValid()) {
+            formattedDateCache = lastUpdated.toString("dd-MM-yyyy");
+        }
+        return formattedDateCache;
     }
+
+    //QString getFormattedDate() const {
+     //   return lastUpdated.isValid() ? lastUpdated.toString("dd-MM-yyyy") : "";
+    //}
 };

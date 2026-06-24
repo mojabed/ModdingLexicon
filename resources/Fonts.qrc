@@ -2,4 +2,12 @@
     <qresource prefix="/fonts">
         <file>InterVariable.ttf</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file>vial.png</file>
+        <file>book.png</file>
+        <file>shield.png</file>
+        <file>star.png</file>
+        <file>gear.png</file>
+        <file>puzzle.png</file>
+    </qresource>
 </RCC>

@@ -8,9 +8,10 @@ AddonFilterModel::AddonFilterModel(QObject* parent)
 
     connect(this, &QSortFilterProxyModel::sourceModelChanged, this, [this]() {
         if (sourceModel()) {
-            // Only invalidate filter when source model changes data
             connect(sourceModel(), &QAbstractItemModel::modelReset,
                 this, &AddonFilterModel::invalidateFilter, Qt::UniqueConnection);
+            connect(sourceModel(), &QAbstractItemModel::dataChanged,
+                this, &AddonFilterModel::onSourceModelDataChanged, Qt::UniqueConnection);
         }
     });
 }
@@ -18,7 +19,19 @@ AddonFilterModel::AddonFilterModel(QObject* parent)
 void AddonFilterModel::setShowInstalledOnly(bool installed) {
     if (m_showInstalledOnly != installed) {
         m_showInstalledOnly = installed;
+        invalidateCache();
         invalidateFilter();
+    }
+}
+
+void AddonFilterModel::invalidateCache() {
+    m_cacheValid = false;
+    m_installedRowsCache.clear();
+}
+
+void AddonFilterModel::onSourceModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles) {
+    if (roles.contains(AddonModel::IsInstalledRole)) {
+        invalidateCache();
     }
 }
 
@@ -37,8 +50,5 @@ bool AddonFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& source
         return false;
     }
 
-    //QModelIndex index = sourceModel()->index(sourceRow, 0, sourceParent);
-    //QVariant isInstalledVariant = sourceModel()->data(index, AddonModel::IsInstalledRole);
     return model->data(index, AddonModel::IsInstalledRole).toBool();
-    //return isInstalledVariant.toBool();
 }

@@ -12,7 +12,12 @@ HttpClient::HttpClient(int maxConcurrentDownloads, QObject* parent)
     m_networkManager->setTransferTimeout(REQUEST_TIMEOUT_MS);
 }
 
-HttpClient::~HttpClient() {}
+HttpClient::~HttpClient() {
+    if (m_networkManager) {
+        m_networkManager->clearConnectionCache();
+        m_networkManager->clearAccessCache();
+    }
+}
 
 void HttpClient::addDownload(const QUrl& url, const QString& filePath) {
     if (!url.isValid()) {
@@ -119,6 +124,7 @@ void HttpClient::onReplyFinished() {
     processDownloadQueue();
 
     if (activeDownloads() == 0) {
+        m_networkManager->clearConnectionCache();
         emit allDownloadsFinished();
     }
 }
@@ -144,12 +150,15 @@ QNetworkRequest HttpClient::createRequest(const QUrl& url) const {
     request.setRawHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
     request.setRawHeader("Accept-Language", "en-US,en;q=0.5");
     request.setRawHeader("Accept-Encoding", "identity");
-    request.setRawHeader("Connection", "keep-alive");
+    request.setRawHeader("Connection", "close");
     request.setRawHeader("Upgrade-Insecure-Requests", "1");
     request.setRawHeader("Sec-Fetch-Dest", "document");
     request.setRawHeader("Sec-Fetch-Mode", "navigate");
     request.setRawHeader("Sec-Fetch-Site", "none");
     request.setRawHeader("Sec-Fetch-User", "?1");
+
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
+    request.setAttribute(QNetworkRequest::CacheSaveControlAttribute, false);
 
     return request;
 }
