@@ -64,6 +64,15 @@ ApplicationWindow {
         currentIndex: bar.currentIndex
 
         interactive: false
+        
+        onCurrentIndexChanged: {
+            console.log("Tab switched to index:", currentIndex)
+            // Reset category view when leaving Browse Addons tab
+            if (currentIndex !== 1) {
+                window.viewingCategoryAddons = false
+                lexicon.installedAddonsFilter.setCategoryFilter("")
+            }
+        }
 
         // Tab 0: My Addons
         Item {
