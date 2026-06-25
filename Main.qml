@@ -98,75 +98,93 @@ ApplicationWindow {
         // Tab 1: Browse Addons
         Item {
             // Category Grid View (visible when not viewing category addons)
-            GridView {
-                id: categoryGrid
-                anchors.fill: parent
-                anchors.margins: 20
-                cellWidth: 160
-                cellHeight: 160
-                clip: true
-                model: lexicon.categoryModel
+            Rectangle {
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.topMargin: 20
+                color: "#1a1a1a"
                 visible: !window.viewingCategoryAddons
+                clip: true
 
-                delegate: Rectangle {
-                    width: 150
-                    height: 150
-                    color: "#2a2a2a"
-                    border.color: "#444"
-                    border.width: 1
-                    radius: 8
-                    
-                    Column {
-                        anchors.centerIn: parent
-                        anchors.margins: 10
-                        spacing: 8
-                        width: parent.width - 20
+                GridView {
+                    id: categoryGrid
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: {
+                        const itemWidth = 160
+                        const itemSpacing = 0
+                        const margin = 20
+                        const availableWidth = parent.width - (margin * 2)
+                        const itemsPerRow = Math.max(1, Math.floor(availableWidth / itemWidth))
+                        return Math.min(itemsPerRow * itemWidth, availableWidth)
+                    }
+                    cellWidth: 160
+                    cellHeight: 160
+                    model: lexicon.categoryModel
 
-                        Image {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            source: model.iconSource
-                            width: 64
-                            height: 64
+                    delegate: Rectangle {
+                        width: 150
+                        height: 150
+                        color: "#2a2a2a"
+                        border.color: "#444"
+                        border.width: 1
+                        radius: 8
+                        
+                        Column {
+                            anchors.centerIn: parent
+                            anchors.margins: 10
+                            spacing: 8
+                            width: parent.width - 20
+
+                            Image {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                source: model.iconSource
+                                width: 64
+                                height: 64
+                            }
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: parent.width
+                                text: model.categoryName
+                                color: "#ffffff"
+                                font.family: window.appFontFamily
+                                font.pixelSize: 12
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: (model.addonCount || 0) + " addon" + ((model.addonCount || 0) !== 1 ? "s" : "")
+                                color: "#90EE90"
+                                font.family: window.appFontFamily
+                                font.pixelSize: 11
+                            }
                         }
 
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: parent.width
-                            text: model.categoryName
-                            color: "#ffffff"
-                            font.family: window.appFontFamily
-                            font.pixelSize: 12
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.WordWrap
-                        }
-
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: (model.addonCount || 0) + " addon" + ((model.addonCount || 0) !== 1 ? "s" : "")
-                            color: "#90EE90"
-                            font.family: window.appFontFamily
-                            font.pixelSize: 11
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onEntered: parent.color = "#353535"
+                            onExited: parent.color = "#2a2a2a"
+                            onClicked: {
+                                console.log("Category clicked:", model.categoryId, "Count:", model.addonCount)
+                                window.selectedCategoryId = model.categoryId
+                                window.selectedCategoryName = model.categoryName
+                                lexicon.installedAddonsFilter.setCategoryFilter(model.categoryId)
+                                window.viewingCategoryAddons = true
+                            }
                         }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onEntered: parent.color = "#353535"
-                        onExited: parent.color = "#2a2a2a"
-                        onClicked: {
-                            console.log("Category clicked:", model.categoryId, "Count:", model.addonCount)
-                            window.selectedCategoryId = model.categoryId
-                            window.selectedCategoryName = model.categoryName
-                            lexicon.installedAddonsFilter.setCategoryFilter(model.categoryId)
-                            window.viewingCategoryAddons = true
-                        }
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
                     }
-                }
-
-                ScrollBar.vertical: ScrollBar {
-                    policy: ScrollBar.AsNeeded
                 }
             }
 
