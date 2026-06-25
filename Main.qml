@@ -1,6 +1,7 @@
-import QtQuick
+﻿import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Layouts
 
 import ModdingLexicon   
 
@@ -20,11 +21,6 @@ ApplicationWindow {
 
     Lexicon {
         id: lexicon
-
-        onMasterListReady: (filePath) => {
-            console.log("Master list ready at: " + filePath)
-            statusText.text = "Master list loaded."
-        }
     }
 
     TabBar {
@@ -45,43 +41,20 @@ ApplicationWindow {
 
         TabButton {
             text: qsTr("My Addons")
-            //hoverEnabled: false
         }
 
         TabButton {
             text: qsTr("Browse Addons")
-            //hoverEnabled: false
         }
 
         TabButton {
             text: qsTr("Settings")
-            //hoverEnabled: false
-        }
-    }
-
-    Rectangle {
-        id: statusBar
-        anchors.top: bar.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 50
-        color: "#1a1a1a"
-        border.color: "#444"
-        border.width: 1
-
-        Text {
-            id: statusText
-            anchors.centerIn: parent
-            color: "#90EE90"
-            text: "Loading master list..."
-            font.pixelSize: 14
-            font.family: appFontFamily
         }
     }
 
     SwipeView {
         id: swipeView
-        anchors.top: statusBar.bottom
+        anchors.top: bar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -89,6 +62,7 @@ ApplicationWindow {
 
         interactive: false
 
+        // Tab 0: My Addons
         Item {
             ListView {
                 anchors.fill: parent
@@ -109,18 +83,64 @@ ApplicationWindow {
             }
         }
 
+        // Tab 1: Browse Addons
         Item {
-            ListView {
+            GridView {
                 anchors.fill: parent
-                anchors.margins: 10
-                model: lexicon.addonModel
-                spacing: 5
+                anchors.margins: 20
+                cellWidth: 160
+                cellHeight: 160
                 clip: true
-                reuseItems: true
-                cacheBuffer: 500
+                model: lexicon.categoryModel
 
-                delegate: ListItemDelegate {
-                    appFontFamily: window.appFontFamily
+                delegate: Rectangle {
+                    width: 150
+                    height: 150
+                    color: "#2a2a2a"
+                    border.color: "#444"
+                    border.width: 1
+                    radius: 8
+                    
+                    Column {
+                        anchors.centerIn: parent
+                        anchors.margins: 10
+                        spacing: 8
+                        width: parent.width - 20
+
+                        Image {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            source: model.iconSource
+                            width: 64
+                            height: 64
+                        }
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: parent.width
+                            text: model.categoryName
+                            color: "#ffffff"
+                            font.family: window.appFontFamily
+                            font.pixelSize: 12
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.WordWrap
+                        }
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: (model.addonCount || 0) + " addon" + ((model.addonCount || 0) !== 1 ? "s" : "")
+                            color: "#90EE90"
+                            font.family: window.appFontFamily
+                            font.pixelSize: 11
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: parent.color = "#353535"
+                        onExited: parent.color = "#2a2a2a"
+                    }
                 }
 
                 ScrollBar.vertical: ScrollBar {
@@ -129,6 +149,7 @@ ApplicationWindow {
             }
         }
 
+        // Tab 2: Settings
         Item {
             Text {
                 anchors.centerIn: parent

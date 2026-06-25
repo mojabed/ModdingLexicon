@@ -19,6 +19,7 @@ set(PROJECT_SOURCES
     src/HttpClient.cpp
     src/AddonModel.cpp
     src/AddonFilterModel.cpp
+    src/CategoryModel.cpp
 )
 
 set(PROJECT_HEADERS
@@ -27,6 +28,7 @@ set(PROJECT_HEADERS
     include/lexicon.h
     include/parser.h
     include/HttpClient.h
+    include/CategoryModel.h
     include/AddonModel.h
     include/AddonFilterModel.h
 )
@@ -50,8 +52,12 @@ qt_add_qml_module(appModdingLexicon
     SOURCES
         include/lexicon.h
         include/AddonModel.h
+        include/AddonFilterModel.h
+        include/CategoryModel.h
         src/lexicon.cpp
         src/AddonModel.cpp
+        src/AddonFilterModel.cpp
+        src/CategoryModel.cpp
     DEPENDENCIES QtQuick
 )
 

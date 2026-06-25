@@ -11,11 +11,13 @@
 #include "parser.h"
 #include "AddonModel.h"
 #include "AddonFilterModel.h"
+#include "CategoryModel.h"
 
 Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     m_httpClient = new HttpClient(3, this);
     m_addonModel = new AddonModel(this);
     m_installedAddonsFilter = new AddonFilterModel(this);
+    m_categoryModel = new CategoryModel(this);
 
     m_installedAddonsFilter->setSourceModel(m_addonModel);
     m_installedAddonsFilter->setShowInstalledOnly(true);
@@ -27,12 +29,12 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
         spdlog::info("Master list updated: {}", filePath.toStdString());
         emit masterListReady(filePath);
         parseMasterList();
-    });
+        });
 
     connect(m_httpClient, &HttpClient::downloadFailed, this, [this](const QString& path, const QString& error) {
         spdlog::error("Failed to update master list: {}", error.toStdString());
         emit downloadError(error);
-    });
+        });
 
     QString appData = Pathing::getInstance()->paths().appData;
     QDir().mkpath(appData);
@@ -49,6 +51,10 @@ AddonModel* Lexicon::addonModel() const {
 
 AddonFilterModel* Lexicon::installedAddonsFilter() const {
     return m_installedAddonsFilter;
+}
+
+CategoryModel* Lexicon::categoryModel() const {
+    return m_categoryModel;
 }
 
 bool Lexicon::loadCachedMasterList() {
@@ -82,7 +88,7 @@ void Lexicon::updateMasterList() { // Served by the MMOUI API
 
 void Lexicon::parseMasterList() {
     spdlog::info("Parsing master list from: {}", m_masterListPath.toStdString());
-    
+
     auto parseFuture = QtConcurrent::run([this]() -> QList<ModInfo> {
         QFile file(m_masterListPath);
         if (!file.open(QIODevice::ReadOnly)) {
@@ -91,28 +97,30 @@ void Lexicon::parseMasterList() {
         }
         QByteArray jsonData = file.readAll();
         file.close();
-        
+
         return Parser::parseEsoMods(jsonData);
-    });
-    
+        });
+
     m_parsingWatcher.setFuture(parseFuture);
 }
 
 void Lexicon::onParsingFinished() {
     auto startTime = std::chrono::high_resolution_clock::now();
-    
+
     m_mods = m_parsingWatcher.result();
-    
+
     if (m_mods.isEmpty()) {
         spdlog::error("Failed to parse master list or list is empty");
         return;
     }
-    
+
     checkInstalledAddons();
-    
+
     m_addonModel->setMods(m_mods);
     spdlog::info("Loaded {} mods into model", m_mods.count());
-    
+
+    populateCategories();
+
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     spdlog::info("parseMasterList took {}ms", duration.count());
@@ -147,11 +155,10 @@ void Lexicon::checkInstalledAddons() {
             if (installedDirsSet.contains(mod.title.toLower())) {
                 mod.isInstalled = true;
                 mod.installPath = addonsDir.filePath(mod.title);
-            //spdlog::info("Found installed addon: {} at {}", mod.title.toStdString(), mod.installPath.toStdString());
             }
         }
-    });
-    
+        });
+
     m_installedCheckWatcher.setFuture(checkFuture);
 }
 
@@ -159,8 +166,29 @@ void Lexicon::onInstalledAddonsCheckFinished() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     m_addonModel->setMods(m_mods);
-    
+
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     spdlog::info("checkInstalledAddons took {}ms", duration.count());
+}
+
+void Lexicon::populateCategories() {
+    QMap<QString, int> categoryMap;
+
+    for (const ModInfo& mod : m_mods) {
+        categoryMap[mod.categoryId]++;
+    }
+
+    QList<CategoryInfo> categories;
+    for (auto it = categoryMap.begin(); it != categoryMap.end(); ++it) {
+        CategoryInfo info;
+        info.categoryId = it.key();
+        info.categoryName = it.key().isEmpty() ? "Uncategorized" : it.key();
+        info.iconSource = iconForCategoryId(it.key());
+        info.addonCount = it.value();
+        categories.append(info);
+    }
+
+    m_categoryModel->setCategories(categories);
+    spdlog::info("Populated {} categories", categories.count());
 }

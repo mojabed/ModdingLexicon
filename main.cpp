@@ -52,12 +52,12 @@ void static setupSpdlog() {
 
 int main(int argc, char *argv[])
 {
-    //qputenv("QSG_INFO", "1");
-    //QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
-
+    qputenv("QSG_BATCH_RENDER_THRESHOLD", "64");
+    qputenv("QSG_BATCH_ALLOCATOR_CHUNK_SIZE", "262144");
+    //qputenv("QSG_RENDER_LOOP", "basic");
+    qputenv("QSG_RHI_BACKEND", "d3d11");
+    
     QGuiApplication app(argc, argv);
-
-
     app.setApplicationName("ModdingLexicon");
 
     setupSpdlog();
@@ -75,6 +75,5 @@ int main(int argc, char *argv[])
 
     engine.loadFromModule("ModdingLexicon", "Main");
 
-    int result = app.exec();
-    return result;
+    return app.exec();
 }

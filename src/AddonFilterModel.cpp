@@ -4,51 +4,81 @@
 
 AddonFilterModel::AddonFilterModel(QObject* parent)
     : QSortFilterProxyModel(parent) {
-    setDynamicSortFilter(false);
 
-    connect(this, &QSortFilterProxyModel::sourceModelChanged, this, [this]() {
+    //setDynamicSortFilter(false);
+
+    m_invalidationTimer.setSingleShot(true);
+    m_invalidationTimer.setInterval(100);
+    connect(&m_invalidationTimer, &QTimer::timeout, this, &AddonFilterModel::flushPendingFilterInvalidation);
+
+    /*connect(this, &QSortFilterProxyModel::sourceModelChanged, this, [this]() {
         if (sourceModel()) {
             connect(sourceModel(), &QAbstractItemModel::modelReset,
-                this, &AddonFilterModel::invalidateFilter, Qt::UniqueConnection);
+                this, [this]() {
+                    invalidateCache();
+                    scheduleFilterInvalidation();
+                }, Qt::UniqueConnection);
             connect(sourceModel(), &QAbstractItemModel::dataChanged,
                 this, &AddonFilterModel::onSourceModelDataChanged, Qt::UniqueConnection);
         }
-    });
+        });*/
 }
 
 void AddonFilterModel::setShowInstalledOnly(bool installed) {
-    if (m_showInstalledOnly != installed) {
-        m_showInstalledOnly = installed;
-        invalidateCache();
+    m_showInstalledOnly = installed;
+    invalidateFilter();
+}
+
+QString AddonFilterModel::categoryFilter() const {
+    return m_categoryFilter;
+}
+
+void AddonFilterModel::setCategoryFilter(const QString& categoryId) {
+    if (m_categoryFilter != categoryId) {
+        m_categoryFilter = categoryId;
         invalidateFilter();
+        emit categoryFilterChanged();
     }
 }
 
 void AddonFilterModel::invalidateCache() {
     m_cacheValid = false;
-    m_installedRowsCache.clear();
+}
+
+void AddonFilterModel::scheduleFilterInvalidation() {
+    if (!m_filterInvalidationPending) {
+        m_filterInvalidationPending = true;
+        m_invalidationTimer.start();
+    }
+}
+
+void AddonFilterModel::flushPendingFilterInvalidation() {
+    m_filterInvalidationPending = false;
+    invalidateCache();
+    invalidateFilter();
 }
 
 void AddonFilterModel::onSourceModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles) {
-    if (roles.contains(AddonModel::IsInstalledRole)) {
-        invalidateCache();
-    }
+    scheduleFilterInvalidation();
 }
 
 bool AddonFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const {
-    if (!m_showInstalledOnly) {
-        return true;
-    }
-
-    QAbstractItemModel* model = sourceModel();
-    if (!model) {
+    if (!sourceModel())
         return false;
+
+    const QModelIndex sourceIndex = sourceModel()->index(sourceRow, 0, sourceParent);
+
+    if (m_showInstalledOnly) {
+        const bool isInstalled = sourceModel()->data(sourceIndex, AddonModel::IsInstalledRole).toBool();
+        if (!isInstalled)
+            return false;
     }
 
-    QModelIndex index = model->index(sourceRow, 0, sourceParent);
-    if (!index.isValid()) {
-        return false;
+    if (!m_categoryFilter.isEmpty()) {
+        const QString categoryId = sourceModel()->data(sourceIndex, AddonModel::CategoryIdRole).toString();
+        if (categoryId != m_categoryFilter)
+            return false;
     }
 
-    return model->data(index, AddonModel::IsInstalledRole).toBool();
+    return true;
 }

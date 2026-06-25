@@ -6,6 +6,29 @@
 
 #include "ModType.h"
 
+static inline QString iconForCategoryId(const QString& categoryId) {
+    if (categoryId.isEmpty()) {
+        return "qrc:/icons/vial.png";
+    }
+
+    const auto hash = qHash(categoryId);
+
+    switch (hash % 6u) {
+    case 0:
+        return "qrc:/icons/vial.png";
+    case 1:
+        return "qrc:/icons/book.png";
+    case 2:
+        return "qrc:/icons/shield.png";
+    case 3:
+        return "qrc:/icons/star.png";
+    case 4:
+        return "qrc:/icons/gear.png";
+    default:
+        return "qrc:/icons/puzzle.png";
+    }
+}
+
 class AddonModel : public QAbstractListModel {
     Q_OBJECT
     QML_ELEMENT
@@ -39,7 +62,7 @@ public:
     };
     Q_ENUM(AddonRoles)
 
-    explicit AddonModel(QObject* parent = nullptr);
+     explicit AddonModel(QObject* parent = nullptr);
     ~AddonModel() override;
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;

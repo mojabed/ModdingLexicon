@@ -6,6 +6,7 @@
 #include <QFutureWatcher>
 
 #include "ModType.h"
+#include "CategoryModel.h"
 
 class HttpClient;
 class AddonModel;
@@ -17,6 +18,7 @@ class Lexicon : public QObject {
     QML_NAMED_ELEMENT(Lexicon)
     Q_PROPERTY(AddonModel* addonModel READ addonModel CONSTANT)
     Q_PROPERTY(AddonFilterModel* installedAddonsFilter READ installedAddonsFilter CONSTANT)
+    Q_PROPERTY(CategoryModel* categoryModel READ categoryModel CONSTANT)
 
 public:
     explicit Lexicon(QObject* parent = nullptr);
@@ -24,6 +26,8 @@ public:
 
     AddonModel* addonModel() const;
     AddonFilterModel* installedAddonsFilter() const;
+
+    CategoryModel* categoryModel() const;
 
 signals:
     void masterListReady(const QString& filePath);
@@ -38,6 +42,9 @@ private:
     AddonModel* m_addonModel;
     AddonFilterModel* m_installedAddonsFilter;
 
+    CategoryModel* m_categoryModel;
+
+    void populateCategories();
     void updateMasterList();
     void parseMasterList();
     void checkInstalledAddons();
