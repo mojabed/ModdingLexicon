@@ -7,17 +7,17 @@
 
 class AddonFilterModel : public QSortFilterProxyModel {
     Q_OBJECT
-        QML_ELEMENT
-        QML_NAMED_ELEMENT(AddonFilterModel)
-        Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
+    QML_ELEMENT
+    QML_NAMED_ELEMENT(AddonFilterModel)
+    Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
 
 public:
     explicit AddonFilterModel(QObject* parent = nullptr);
 
     Q_INVOKABLE void setShowInstalledOnly(bool installed);
+    Q_INVOKABLE void setCategoryFilter(const QString& categoryId);
 
     QString categoryFilter() const;
-    void setCategoryFilter(const QString& categoryId);
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;

@@ -10,18 +10,6 @@ AddonFilterModel::AddonFilterModel(QObject* parent)
     m_invalidationTimer.setSingleShot(true);
     m_invalidationTimer.setInterval(100);
     connect(&m_invalidationTimer, &QTimer::timeout, this, &AddonFilterModel::flushPendingFilterInvalidation);
-
-    /*connect(this, &QSortFilterProxyModel::sourceModelChanged, this, [this]() {
-        if (sourceModel()) {
-            connect(sourceModel(), &QAbstractItemModel::modelReset,
-                this, [this]() {
-                    invalidateCache();
-                    scheduleFilterInvalidation();
-                }, Qt::UniqueConnection);
-            connect(sourceModel(), &QAbstractItemModel::dataChanged,
-                this, &AddonFilterModel::onSourceModelDataChanged, Qt::UniqueConnection);
-        }
-        });*/
 }
 
 void AddonFilterModel::setShowInstalledOnly(bool installed) {
@@ -34,10 +22,16 @@ QString AddonFilterModel::categoryFilter() const {
 }
 
 void AddonFilterModel::setCategoryFilter(const QString& categoryId) {
+    spdlog::info("setCategoryFilter called with: '{}'", categoryId.toStdString());
+    spdlog::info("Source model has {} rows", sourceModel() ? sourceModel()->rowCount() : 0);
+    
     if (m_categoryFilter != categoryId) {
         m_categoryFilter = categoryId;
+        spdlog::info("Filter changed to: '{}', invalidating filter", categoryId.toStdString());
         invalidateFilter();
         emit categoryFilterChanged();
+        
+        spdlog::info("After invalidateFilter, filtered row count: {}", rowCount());
     }
 }
 
@@ -68,7 +62,7 @@ bool AddonFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& source
 
     const QModelIndex sourceIndex = sourceModel()->index(sourceRow, 0, sourceParent);
 
-    if (m_showInstalledOnly) {
+    if (m_categoryFilter.isEmpty() && m_showInstalledOnly) {
         const bool isInstalled = sourceModel()->data(sourceIndex, AddonModel::IsInstalledRole).toBool();
         if (!isInstalled)
             return false;

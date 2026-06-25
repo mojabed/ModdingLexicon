@@ -173,22 +173,45 @@ void Lexicon::onInstalledAddonsCheckFinished() {
 }
 
 void Lexicon::populateCategories() {
-    QMap<QString, int> categoryMap;
-
-    for (const ModInfo& mod : m_mods) {
-        categoryMap[mod.categoryId]++;
+    spdlog::info("populateCategories() called");
+    
+    if (!m_categoryModel) {
+        spdlog::error("m_categoryModel is null!");
+        return;
     }
 
-    QList<CategoryInfo> categories;
-    for (auto it = categoryMap.begin(); it != categoryMap.end(); ++it) {
-        CategoryInfo info;
-        info.categoryId = it.key();
-        info.categoryName = it.key().isEmpty() ? "Uncategorized" : it.key();
-        info.iconSource = iconForCategoryId(it.key());
-        info.addonCount = it.value();
-        categories.append(info);
+    spdlog::info("m_mods count: {}", m_mods.count());
+    
+    if (m_mods.isEmpty()) {
+        spdlog::warn("m_mods is empty, nothing to categorize");
+        return;
     }
 
-    m_categoryModel->setCategories(categories);
-    spdlog::info("Populated {} categories", categories.count());
+    try {
+        QMap<QString, int> categoryMap;
+
+        spdlog::info("Starting to iterate through mods");
+        for (int i = 0; i < m_mods.count(); ++i) {
+            const ModInfo& mod = m_mods.at(i);
+            categoryMap[mod.categoryId]++;
+        }
+
+        spdlog::info("Found {} unique categories", categoryMap.count());
+
+        QList<CategoryInfo> categories;
+        for (auto it = categoryMap.begin(); it != categoryMap.end(); ++it) {
+            CategoryInfo info;
+            info.categoryId = it.key();
+            info.categoryName = it.key().isEmpty() ? "Uncategorized" : it.key();
+            info.iconSource = iconForCategoryId(it.key());
+            info.addonCount = it.value();
+            categories.append(info);
+        }
+
+        spdlog::info("Created {} category objects, calling setCategories", categories.count());
+        m_categoryModel->setCategories(categories);
+        spdlog::info("Populated {} categories", categories.count());
+    } catch (const std::exception& e) {
+        spdlog::error("Exception in populateCategories: {}", e.what());
+    }
 }
