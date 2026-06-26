@@ -48,6 +48,7 @@ qt_add_qml_module(appModdingLexicon
     VERSION 1.0
     QML_FILES
         Main.qml
+        MainTabBar.qml
         ListItemDelegate.qml
     SOURCES
         include/lexicon.h

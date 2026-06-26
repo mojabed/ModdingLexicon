@@ -26,33 +26,12 @@ ApplicationWindow {
         id: lexicon
     }
 
-    TabBar {
+    MainTabBar {
         id: bar
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 72
-        contentHeight: 72
-
-        background: Rectangle {
-            color: "#232323"
-        }
-
-        font.family: appFontFamily
-        font.pixelSize: 20
-        font.bold: true
-
-        TabButton {
-            text: qsTr("My Addons")
-        }
-
-        TabButton {
-            text: qsTr("Browse Addons")
-        }
-
-        TabButton {
-            text: qsTr("Settings")
-        }
+        appFontFamily: window.appFontFamily
     }
 
     SwipeView {
