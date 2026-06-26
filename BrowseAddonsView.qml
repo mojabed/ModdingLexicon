@@ -1,0 +1,221 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Layouts
+
+Item {
+    id: root
+
+    property string appFontFamily: "Segoe UI"
+    property var appWindow
+    property var lexiconController
+
+    width: parent ? parent.width : 0
+    height: parent ? parent.height : 0
+    clip: true
+
+    Rectangle {
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.topMargin: 20
+        color: "#1a1a1a"
+        visible: root.appWindow ? !root.appWindow.viewingCategoryAddons : true
+        clip: true
+
+        GridView {
+            id: categoryGrid
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: {
+                const itemWidth = 160
+                const margin = 20
+                const availableWidth = parent.width - (margin * 2)
+                const itemsPerRow = Math.max(1, Math.floor(availableWidth / itemWidth))
+                return Math.min(itemsPerRow * itemWidth, availableWidth)
+            }
+            model: root.lexiconController ? root.lexiconController.categoryModel : null
+            cellWidth: 160
+            cellHeight: 160
+
+            delegate: Rectangle {
+                width: 150
+                height: 150
+                color: "#2a2a2a"
+                border.color: "#444"
+                border.width: 1
+                radius: 8
+
+                Column {
+                    anchors.centerIn: parent
+                    anchors.margins: 10
+                    spacing: 8
+                    width: parent.width - 20
+
+                    Image {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        source: model.iconSource
+                        width: 64
+                        height: 64
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width
+                        text: model.categoryName
+                        color: "#ffffff"
+                        font.family: root.appFontFamily
+                        font.pixelSize: 12
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: (model.addonCount || 0) + " addon" + ((model.addonCount || 0) !== 1 ? "s" : "")
+                        color: "#90EE90"
+                        font.family: root.appFontFamily
+                        font.pixelSize: 11
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: parent.color = "#353535"
+                    onExited: parent.color = "#2a2a2a"
+                    onClicked: {
+                        console.log("Category clicked:", model.categoryId, "Count:", model.addonCount)
+                        root.appWindow.selectedCategoryId = model.categoryId
+                        root.appWindow.selectedCategoryName = model.categoryName
+                        root.lexiconController.installedAddonsFilter.setCategoryFilter(model.categoryId)
+                        root.appWindow.viewingCategoryAddons = true
+                    }
+                }
+            }
+
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+                implicitWidth: 8
+                background: Rectangle { color: "transparent" }
+                contentItem: Rectangle {
+                    implicitWidth: 8
+                    implicitHeight: 24
+                    radius: width / 2
+                    color: Material.color(Material.Grey, Material.Shade700)
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#1a1a1a"
+        visible: root.appWindow ? root.appWindow.viewingCategoryAddons : false
+        clip: true
+
+        Rectangle {
+            id: headerRect
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 50
+            color: "#232323"
+            border.color: "#444"
+            border.width: 1
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 10
+
+                Button {
+                    text: "? Back"
+                    Layout.preferredWidth: 80
+                    onClicked: {
+                        console.log("Back button clicked")
+                        root.appWindow.viewingCategoryAddons = false
+                        root.lexiconController.installedAddonsFilter.setCategoryFilter("")
+                        root.appWindow.selectedCategoryId = ""
+                        root.appWindow.selectedCategoryName = ""
+                    }
+                }
+
+                Text {
+                    text: root.appWindow ? (root.appWindow.selectedCategoryName + " (" + categoryAddonsList.count + ")") : ""
+                    color: "white"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 14
+                    font.bold: true
+                    Layout.fillWidth: true
+                }
+            }
+        }
+
+        ListView {
+            id: categoryAddonsList
+            anchors.top: headerRect.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 10
+            spacing: 5
+            clip: true
+            reuseItems: true
+            cacheBuffer: 500
+            model: root.lexiconController ? root.lexiconController.installedAddonsFilter : null
+
+            onCountChanged: console.log("ListView count changed to:", count)
+
+            delegate: Rectangle {
+                width: categoryAddonsList.width - 20
+                height: 60
+                color: "#2a2a2a"
+                radius: 6
+
+                Component.onCompleted: console.log("Delegate created - title:", model.title)
+
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 12
+
+                    Image {
+                        source: model.iconSource
+                        width: 36
+                        height: 36
+                        fillMode: Image.PreserveAspectFit
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        width: Math.max(0, parent.width - 48)
+                        text: model.title ? (model.title + "\nby " + model.author) : "No data"
+                        color: "white"
+                        font.family: root.appFontFamily
+                        font.pixelSize: 16
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                        wrapMode: Text.WordWrap
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+                implicitWidth: 8
+                background: Rectangle { color: "transparent" }
+                contentItem: Rectangle {
+                    implicitWidth: 8
+                    implicitHeight: 24
+                    radius: width / 2
+                    color: Material.color(Material.Grey, Material.Shade700)
+                }
+            }
+        }
+    }
+}

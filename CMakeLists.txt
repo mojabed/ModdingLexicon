@@ -50,6 +50,9 @@ qt_add_qml_module(appModdingLexicon
         Main.qml
         MainTabBar.qml
         ListItemDelegate.qml
+        MyAddonsView.qml
+        BrowseAddonsView.qml
+        SettingsView.qml
     SOURCES
         include/lexicon.h
         include/AddonModel.h
