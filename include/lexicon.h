@@ -4,6 +4,7 @@
 #include <QtQml>
 #include <QDateTime>
 #include <QFutureWatcher>
+#include <QMap>
 
 #include "ModType.h"
 #include "CategoryModel.h"
@@ -45,14 +46,19 @@ private:
     CategoryModel* m_categoryModel;
 
     void populateCategories();
+    void applyCategoryNamesToMods();
     void updateMasterList();
+    void updateCategoryList();
     void parseMasterList();
+    void parseCategoryList();
     void checkInstalledAddons();
     bool loadCachedMasterList();
 
     QString m_masterListPath;
+    QString m_categoryListPath;
     QList<ModInfo> m_mods;
-    
+    QMap<QString, QString> m_categoryNames;
+
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;
     QFutureWatcher<void> m_installedCheckWatcher;
 };

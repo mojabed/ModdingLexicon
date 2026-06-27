@@ -3,10 +3,46 @@
 #include <QJsonObject>
 #include <QDateTime>
 #include <QUrl>
+#include <QMap>
 
 #include "parser.h"
 
 const QString Parser::m_downloadUrlPrefix = "https://www.esoui.com/downloads/download";
+
+namespace {
+QString readStringValue(const QJsonObject& object, const QStringList& keys) {
+    for (const QString& key : keys) {
+        if (object.contains(key) && object[key].isString()) {
+            const QString value = object[key].toString();
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+    }
+    return {};
+}
+
+QString readCategoryId(const QJsonObject& object) {
+    QStringList candidates{"id", "categoryId", "category_id", "category"};
+    QString value = readStringValue(object, candidates);
+    if (!value.isEmpty()) {
+        return value;
+    }
+
+    for (const QString& key : candidates) {
+        if (object.contains(key) && object[key].isDouble()) {
+            return QString::number(object[key].toDouble());
+        }
+    }
+
+    return {};
+}
+
+QString readCategoryName(const QJsonObject& object) {
+    QStringList candidates{"name", "categoryName", "category_name", "title", "label"};
+    return readStringValue(object, candidates);
+}
+}
 
 ModInfo Parser::fromEsoJson(const QJsonObject& json) {
     ModInfo mod;
@@ -14,6 +50,9 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
 
     mod.id = QString::number(json["id"].toDouble());
     mod.categoryId = json["categoryId"].isString() ? json["categoryId"].toString() : QString::number(json["categoryId"].toDouble());
+    mod.categoryName = json.contains("categoryName") && json["categoryName"].isString()
+        ? json["categoryName"].toString()
+        : QString();
     mod.version = json["version"].isString() ? json["version"].toString() : QString::number(json["version"].toDouble());
 
     mod.title = json["title"].toString();
@@ -92,6 +131,7 @@ ModInfo Parser::fromCacheJson(const QJsonObject& json) {
 
     mod.id = json["id"].toString();
     mod.categoryId = json["categoryId"].toString();
+    mod.categoryName = json.contains("categoryName") ? json["categoryName"].toString() : QString();
     mod.version = json["version"].toString();
     mod.lastUpdate = json["lastUpdate"].toString();
     mod.title = json["title"].toString();
@@ -155,6 +195,7 @@ QJsonObject Parser::toCacheJson(const ModInfo& mod) {
 
     json["id"] = mod.id;
     json["categoryId"] = mod.categoryId;
+    json["categoryName"] = mod.categoryName;
     json["version"] = mod.version;
     json["lastUpdate"] = mod.lastUpdate;
     json["title"] = mod.title;
@@ -193,15 +234,57 @@ QList<ModInfo> Parser::parseEsoMods(const QByteArray& jsonData) {
     QJsonDocument document = QJsonDocument::fromJson(jsonData, &parseError);
 
     if (parseError.error != QJsonParseError::NoError || !document.isArray()) {
-        // Caller should handle logging the error
         return mods;
     }
 
-
-    //const QJsonValue& value : modsJsonArray
     QJsonArray modsJsonArray = document.array();
     for (int i = 1; i < modsJsonArray.size(); ++i) {
         mods.append(fromEsoJson(modsJsonArray[i].toObject()));
     }
     return mods;
+}
+
+QMap<QString, QString> Parser::parseCategoryNames(const QByteArray& jsonData) {
+    QMap<QString, QString> categories;
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(jsonData, &parseError);
+
+    if (parseError.error != QJsonParseError::NoError) {
+        return categories;
+    }
+
+    auto addCategory = [&](const QJsonObject& object) {
+        const QString id = readCategoryId(object);
+        const QString name = readCategoryName(object);
+        if (!id.isEmpty() && !name.isEmpty()) {
+            categories[id] = name;
+        }
+    };
+
+    if (document.isArray()) {
+        for (const QJsonValue& value : document.array()) {
+            if (value.isObject()) {
+                addCategory(value.toObject());
+            }
+        }
+    } else if (document.isObject()) {
+        const QJsonObject root = document.object();
+        QList<QString> candidateArrays{"categories", "data", "items", "results"};
+        for (const QString& key : candidateArrays) {
+            if (root.contains(key) && root[key].isArray()) {
+                for (const QJsonValue& value : root[key].toArray()) {
+                    if (value.isObject()) {
+                        addCategory(value.toObject());
+                    }
+                }
+                break;
+            }
+        }
+
+        if (categories.isEmpty()) {
+            addCategory(root);
+        }
+    }
+
+    return categories;
 }

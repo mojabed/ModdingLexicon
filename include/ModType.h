@@ -18,6 +18,7 @@ struct ModInfo {
     // Identification
     QString id;
     QString categoryId;
+    QString categoryName;
     QString title;
     QString author;
 
@@ -53,8 +54,4 @@ struct ModInfo {
         }
         return formattedDateCache;
     }
-
-    //QString getFormattedDate() const {
-     //   return lastUpdated.isValid() ? lastUpdated.toString("dd-MM-yyyy") : "";
-    //}
 };

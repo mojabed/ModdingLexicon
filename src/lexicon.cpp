@@ -4,6 +4,8 @@
 #include <QFileInfo>
 #include <chrono>
 #include <QtConcurrent>
+#include <QMap>
+#include <QFile>
 
 #include "lexicon.h"
 #include "HttpClient.h"
@@ -26,20 +28,27 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     connect(&m_installedCheckWatcher, &QFutureWatcher<void>::finished, this, &Lexicon::onInstalledAddonsCheckFinished);
 
     connect(m_httpClient, &HttpClient::downloadFinished, this, [this](const QString& filePath) {
-        spdlog::info("Master list updated: {}", filePath.toStdString());
-        emit masterListReady(filePath);
-        parseMasterList();
-        });
+        if (filePath == m_masterListPath) {
+            spdlog::info("Master list updated: {}", filePath.toStdString());
+            emit masterListReady(filePath);
+            parseMasterList();
+        } else if (filePath == m_categoryListPath) {
+            spdlog::info("Category list updated: {}", filePath.toStdString());
+            parseCategoryList();
+        }
+    });
 
     connect(m_httpClient, &HttpClient::downloadFailed, this, [this](const QString& path, const QString& error) {
         spdlog::error("Failed to update master list: {}", error.toStdString());
         emit downloadError(error);
-        });
+    });
 
     QString appData = Pathing::getInstance()->paths().appData;
     QDir().mkpath(appData);
     m_masterListPath = appData + "/filelist.json";
+    m_categoryListPath = appData + "/categorylist.json";
 
+    updateCategoryList();
     updateMasterList();
 }
 
@@ -79,11 +88,16 @@ bool Lexicon::loadCachedMasterList() {
     return true;
 }
 
-// The master list contains all ESO addons that are hosted on ESOUI
-void Lexicon::updateMasterList() { // Served by the MMOUI API
+void Lexicon::updateMasterList() {
     QUrl url("https://api.mmoui.com/v4/game/ESO/filelist.json");
     spdlog::info("Starting master list download to: {}", m_masterListPath.toStdString());
     m_httpClient->addDownload(url, m_masterListPath);
+}
+
+void Lexicon::updateCategoryList() {
+    QUrl url("https://api.mmoui.com/v4/game/ESO/categorylist.json");
+    spdlog::info("Starting category list download to: {}", m_categoryListPath.toStdString());
+    m_httpClient->addDownload(url, m_categoryListPath);
 }
 
 void Lexicon::parseMasterList() {
@@ -104,6 +118,26 @@ void Lexicon::parseMasterList() {
     m_parsingWatcher.setFuture(parseFuture);
 }
 
+void Lexicon::parseCategoryList() {
+    spdlog::info("Parsing category list from: {}", m_categoryListPath.toStdString());
+
+    QFile file(m_categoryListPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        spdlog::error("Failed to open category list file for parsing: {}", m_categoryListPath.toStdString());
+        return;
+    }
+
+    QByteArray jsonData = file.readAll();
+    file.close();
+
+    m_categoryNames = Parser::parseCategoryNames(jsonData);
+    applyCategoryNamesToMods();
+
+    if (!m_mods.isEmpty()) {
+        populateCategories();
+    }
+}
+
 void Lexicon::onParsingFinished() {
     auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -114,6 +148,7 @@ void Lexicon::onParsingFinished() {
         return;
     }
 
+    applyCategoryNamesToMods();
     checkInstalledAddons();
 
     m_addonModel->setMods(m_mods);
@@ -172,16 +207,24 @@ void Lexicon::onInstalledAddonsCheckFinished() {
     spdlog::info("checkInstalledAddons took {}ms", duration.count());
 }
 
+void Lexicon::applyCategoryNamesToMods() {
+    for (ModInfo& mod : m_mods) {
+        if (!mod.categoryId.isEmpty() && m_categoryNames.contains(mod.categoryId)) {
+            mod.categoryName = m_categoryNames.value(mod.categoryId);
+        }
+    }
+}
+
 void Lexicon::populateCategories() {
     spdlog::info("populateCategories() called");
-    
+
     if (!m_categoryModel) {
         spdlog::error("m_categoryModel is null!");
         return;
     }
 
     spdlog::info("m_mods count: {}", m_mods.count());
-    
+
     if (m_mods.isEmpty()) {
         spdlog::warn("m_mods is empty, nothing to categorize");
         return;
@@ -189,11 +232,16 @@ void Lexicon::populateCategories() {
 
     try {
         QMap<QString, int> categoryMap;
+        QMap<QString, QString> categoryNames;
 
         spdlog::info("Starting to iterate through mods");
         for (int i = 0; i < m_mods.count(); ++i) {
             const ModInfo& mod = m_mods.at(i);
-            categoryMap[mod.categoryId]++;
+            const QString categoryId = mod.categoryId;
+            categoryMap[categoryId]++;
+            if (!mod.categoryName.isEmpty()) {
+                categoryNames[categoryId] = mod.categoryName;
+            }
         }
 
         spdlog::info("Found {} unique categories", categoryMap.count());
@@ -202,7 +250,10 @@ void Lexicon::populateCategories() {
         for (auto it = categoryMap.begin(); it != categoryMap.end(); ++it) {
             CategoryInfo info;
             info.categoryId = it.key();
-            info.categoryName = it.key().isEmpty() ? "Uncategorized" : it.key();
+            const QString displayName = categoryNames.value(it.key());
+            info.categoryName = displayName.isEmpty()
+                ? (it.key().isEmpty() ? "Uncategorized" : it.key())
+                : displayName;
             info.iconSource = iconForCategoryId(it.key());
             info.addonCount = it.value();
             categories.append(info);
