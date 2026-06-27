@@ -9,6 +9,8 @@ TabBar {
 
     property string appFontFamily: "Segoe UI"
 
+    signal browseTabReclicked()
+
     Material.theme: Material.Dark
     Material.accent: Material.DeepPurple
     Material.foreground: Material.PrimaryText
@@ -28,6 +30,11 @@ TabBar {
 
     TabButton {
         text: qsTr("Browse Addons")
+        onClicked: {
+            if (bar.currentIndex === 1) {
+                bar.browseTabReclicked()
+            }
+        }
     }
 
     TabButton {

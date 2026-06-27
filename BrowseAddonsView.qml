@@ -9,10 +9,35 @@ Item {
     property string appFontFamily: "Segoe UI"
     property var appWindow
     property var lexiconController
+    property bool isSearching: searchField.text !== ""
+
+    function goBack() {
+        searchField.clear()
+        if (root.appWindow) {
+            root.appWindow.viewingCategoryAddons = false
+            root.appWindow.selectedCategoryId = ""
+            root.appWindow.selectedCategoryName = ""
+        }
+        if (root.lexiconController) {
+            root.lexiconController.installedAddonsFilter.setCategoryFilter("")
+            root.lexiconController.installedAddonsFilter.setShowInstalledOnly(true)
+        }
+    }
 
     width: parent ? parent.width : 0
     height: parent ? parent.height : 0
     clip: true
+
+    onVisibleChanged: {
+        if (visible && root.lexiconController && searchField.text !== "") {
+            var filter = root.lexiconController.installedAddonsFilter
+            filter.setSearchText(searchField.text)
+            if (!root.appWindow || !root.appWindow.viewingCategoryAddons) {
+                filter.setShowInstalledOnly(false)
+                filter.setCategoryFilter("")
+            }
+        }
+    }
 
     Rectangle {
         id: browseHeader
@@ -46,10 +71,7 @@ Item {
                 hoverEnabled: true
                 onClicked: {
                     console.log("Back button clicked")
-                    root.appWindow.viewingCategoryAddons = false
-                    root.lexiconController.installedAddonsFilter.setCategoryFilter("")
-                    root.appWindow.selectedCategoryId = ""
-                    root.appWindow.selectedCategoryName = ""
+                    root.goBack()
                 }
 
                 background: Rectangle {
@@ -87,6 +109,23 @@ Item {
                     border.color: "#555"
                     border.width: 1
                 }
+
+                onTextChanged: {
+                    if (root.lexiconController) {
+                        var filter = root.lexiconController.installedAddonsFilter
+                        filter.setSearchText(text)
+
+                        if (text !== "" && !root.appWindow.viewingCategoryAddons) {
+                            // Searching from grid: show all addons, clear category filter
+                            filter.setShowInstalledOnly(false)
+                            filter.setCategoryFilter("")
+                        } else if (text === "" && !root.appWindow.viewingCategoryAddons) {
+                            // Search cleared, back to grid
+                            filter.setShowInstalledOnly(true)
+                            filter.setCategoryFilter("")
+                        }
+                    }
+                }
             }
 
             Item {
@@ -94,8 +133,16 @@ Item {
             }
 
             Text {
-                visible: root.appWindow ? root.appWindow.viewingCategoryAddons : false
-                text: root.appWindow ? (root.appWindow.selectedCategoryName + " (" + categoryAddonsList.count + ")") : ""
+                visible: {
+                    if (!root.appWindow) return false
+                    return root.appWindow.viewingCategoryAddons || root.isSearching
+                }
+                text: {
+                    if (!root.appWindow) return ""
+                    if (root.isSearching && !root.appWindow.viewingCategoryAddons)
+                        return "Search results (" + categoryAddonsList.count + ")"
+                    return root.appWindow.selectedCategoryName + " (" + categoryAddonsList.count + ")"
+                }
                 color: "white"
                 font.family: root.appFontFamily
                 font.pixelSize: 14
@@ -113,7 +160,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         color: "#1a1a1a"
-        visible: root.appWindow ? !root.appWindow.viewingCategoryAddons : true
+        visible: root.appWindow ? (!root.appWindow.viewingCategoryAddons && !root.isSearching) : true
         clip: true
 
         GridView {
@@ -210,7 +257,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         color: "#1a1a1a"
-        visible: root.appWindow ? root.appWindow.viewingCategoryAddons : false
+        visible: root.appWindow ? (root.appWindow.viewingCategoryAddons || root.isSearching) : false
         clip: true
 
         ListView {
@@ -231,8 +278,6 @@ Item {
                 color: "#2a2a2a"
                 radius: 6
 
-                Component.onCompleted: console.log("Delegate created - title:", model.title)
-
                 Row {
                     anchors.fill: parent
                     anchors.margins: 10
@@ -246,16 +291,42 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
-                    Text {
+                    Column {
                         width: Math.max(0, parent.width - 48)
-                        text: model.title ? (model.title + "\nby " + model.author) : "No data"
-                        color: "white"
-                        font.family: root.appFontFamily
-                        font.pixelSize: 16
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
-                        wrapMode: Text.WordWrap
-                        verticalAlignment: Text.AlignVCenter
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+
+                        Text {
+                            width: parent.width
+                            text: model.title || "No data"
+                            color: "white"
+                            font.family: root.appFontFamily
+                            font.pixelSize: 14
+                            font.bold: true
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: model.version || ""
+                            color: "#aaaaaa"
+                            font.family: root.appFontFamily
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            visible: model.version !== ""
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: "by " + (model.author || "")
+                            color: "#aaaaaa"
+                            font.family: root.appFontFamily
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                        }
                     }
                 }
             }

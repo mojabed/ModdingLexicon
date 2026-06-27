@@ -6,6 +6,7 @@
 #include <QtConcurrent>
 #include <QMap>
 #include <QFile>
+#include <algorithm>
 
 #include "lexicon.h"
 #include "HttpClient.h"
@@ -94,7 +95,6 @@ void Lexicon::updateMasterList() {
 
 void Lexicon::updateCategoryList() {
     QUrl url("https://api.mmoui.com/v4/game/ESO/categorylist.json");
-    spdlog::info("Starting category list download to: {}", m_categoryListPath.toStdString());
     m_httpClient->addDownload(url, m_categoryListPath);
 }
 
@@ -117,7 +117,6 @@ void Lexicon::parseMasterList() {
 }
 
 void Lexicon::parseCategoryList() {
-    spdlog::info("Parsing category list from: {}", m_categoryListPath.toStdString());
 
     QFile file(m_categoryListPath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -131,7 +130,21 @@ void Lexicon::parseCategoryList() {
     m_categoryNames = Parser::parseCategoryNames(jsonData);
     m_categoryIcons = Parser::parseCategoryIcons(jsonData);
     m_addonModel->setCategoryIcons(m_categoryIcons);
+
+    for (auto it = m_categoryNames.begin(); it != m_categoryNames.end(); ++it) {
+        if (it.value() == QStringLiteral("Discontinued & Outdated")) {
+            m_discontinuedCategoryId = it.key();
+            break;
+        }
+    }
+
     applyCategoryMetadataToMods();
+
+    if (!m_discontinuedCategoryId.isEmpty()) {
+        m_mods.erase(std::remove_if(m_mods.begin(), m_mods.end(),
+            [this](const ModInfo& mod) { return mod.categoryId == m_discontinuedCategoryId; }),
+            m_mods.end());
+    }
 
     if (!m_mods.isEmpty()) {
         populateCategories();
@@ -148,6 +161,14 @@ void Lexicon::onParsingFinished() {
     }
 
     applyCategoryMetadataToMods();
+
+    // Remove mods in the discontinued category
+    if (!m_discontinuedCategoryId.isEmpty()) {
+        m_mods.erase(std::remove_if(m_mods.begin(), m_mods.end(),
+            [this](const ModInfo& mod) { return mod.categoryId == m_discontinuedCategoryId; }),
+            m_mods.end());
+    }
+
     checkInstalledAddons();
 
     m_addonModel->setMods(m_mods);
@@ -174,18 +195,44 @@ void Lexicon::checkInstalledAddons() {
 
         QStringList installedDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 
+        spdlog::info("Found {} installed addon directories", installedDirs.size());
+
         QSet<QString> installedDirsSet;
         installedDirsSet.reserve(installedDirs.size());
         for (const QString& dir : installedDirs) {
             installedDirsSet.insert(dir.toLower());
+            spdlog::debug("Installed dir: '{}'", dir.toStdString());
         }
 
+        int matchedCount = 0;
         for (ModInfo& mod : m_mods) {
-            if (installedDirsSet.contains(mod.title.toLower())) {
+            const QString lowerTitle = mod.title.toLower();
+
+            if (installedDirsSet.contains(lowerTitle)) {
                 mod.isInstalled = true;
                 mod.installPath = addonsDir.filePath(mod.title);
+                matchedCount++;
+                continue;
+            }
+
+            QString normalizedTitle = lowerTitle;
+            normalizedTitle.remove(' ');
+            if (normalizedTitle != lowerTitle) {
+                for (const QString& dir : installedDirs) {
+                    QString normalizedDir = dir.toLower();
+                    normalizedDir.remove(' ');
+                    if (normalizedTitle == normalizedDir) {
+                        mod.isInstalled = true;
+                        mod.installPath = addonsDir.filePath(dir);
+                        matchedCount++;
+                        spdlog::debug("Normalized match: title='{}' -> dir='{}'",
+                                      mod.title.toStdString(), dir.toStdString());
+                        break;
+                    }
+                }
             }
         }
+
         });
 
     m_installedCheckWatcher.setFuture(checkFuture);
@@ -231,12 +278,19 @@ void Lexicon::populateCategories() {
 
         QList<CategoryInfo> categories;
         for (auto it = categoryMap.begin(); it != categoryMap.end(); ++it) {
-            CategoryInfo info;
-            info.categoryId = it.key();
             const QString displayName = categoryNames.value(it.key());
-            info.categoryName = displayName.isEmpty()
+            const QString finalName = displayName.isEmpty()
                 ? (it.key().isEmpty() ? "Uncategorized" : it.key())
                 : displayName;
+
+            // Skip Discontinued & Outdated category
+            if (finalName == QStringLiteral("Discontinued & Outdated")) {
+                continue;
+            }
+
+            CategoryInfo info;
+            info.categoryId = it.key();
+            info.categoryName = finalName;
             info.iconSource = m_categoryIcons.contains(it.key())
                 ? m_categoryIcons.value(it.key())
                 : iconForCategoryId(it.key());

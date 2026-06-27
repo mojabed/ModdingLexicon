@@ -32,6 +32,10 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         appFontFamily: window.appFontFamily
+
+        onBrowseTabReclicked: {
+            browseAddonsView.goBack()
+        }
     }
 
     SwipeView {
@@ -46,11 +50,11 @@ ApplicationWindow {
 
         onCurrentIndexChanged: {
             console.log("Tab switched to index:", currentIndex)
-            // Reset category view when leaving Browse Addons tab
             if (currentIndex !== 1) {
                 window.viewingCategoryAddons = false
                 lexicon.installedAddonsFilter.setCategoryFilter("")
             }
+            lexicon.installedAddonsFilter.setSearchText("")
         }
 
         MyAddonsView {
@@ -61,6 +65,7 @@ ApplicationWindow {
         }
 
         BrowseAddonsView {
+            id: browseAddonsView
             width: swipeView.width
             height: swipeView.height
             appFontFamily: window.appFontFamily

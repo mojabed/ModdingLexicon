@@ -24,14 +24,26 @@ QString AddonFilterModel::categoryFilter() const {
 void AddonFilterModel::setCategoryFilter(const QString& categoryId) {
     spdlog::info("setCategoryFilter called with: '{}'", categoryId.toStdString());
     spdlog::info("Source model has {} rows", sourceModel() ? sourceModel()->rowCount() : 0);
-    
+
     if (m_categoryFilter != categoryId) {
         m_categoryFilter = categoryId;
         spdlog::info("Filter changed to: '{}', invalidating filter", categoryId.toStdString());
         invalidateFilter();
         emit categoryFilterChanged();
-        
+
         spdlog::info("After invalidateFilter, filtered row count: {}", rowCount());
+    }
+}
+
+QString AddonFilterModel::searchText() const {
+    return m_searchText;
+}
+
+void AddonFilterModel::setSearchText(const QString& text) {
+    if (m_searchText != text) {
+        m_searchText = text;
+        invalidateFilter();
+        emit searchTextChanged();
     }
 }
 
@@ -72,6 +84,15 @@ bool AddonFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& source
         const QString categoryId = sourceModel()->data(sourceIndex, AddonModel::CategoryIdRole).toString();
         if (categoryId != m_categoryFilter)
             return false;
+    }
+
+    if (!m_searchText.isEmpty()) {
+        const QString title = sourceModel()->data(sourceIndex, AddonModel::TitleRole).toString();
+        const QString author = sourceModel()->data(sourceIndex, AddonModel::AuthorRole).toString();
+        if (!title.contains(m_searchText, Qt::CaseInsensitive) &&
+            !author.contains(m_searchText, Qt::CaseInsensitive)) {
+            return false;
+        }
     }
 
     return true;

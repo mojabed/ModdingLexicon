@@ -1,10 +1,11 @@
 import QtQuick
 
 Rectangle {
-    required property string title
-    required property string author
-    required property string appFontFamily
-    required property url iconSource
+    property string title: ""
+    property string author: ""
+    property string version: ""
+    property string appFontFamily: "Segoe UI"
+    property url iconSource
 
     width: ListView.view.width
     height: 60
@@ -24,16 +25,42 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
         }
 
-        Text {
+        Column {
             width: Math.max(0, parent.width - 48)
-            text: title + "\nby " + author
-            color: "white"
-            font.family: appFontFamily
-            font.pixelSize: 16
-            maximumLineCount: 2
-            elide: Text.ElideRight
-            wrapMode: Text.WordWrap
-            verticalAlignment: Text.AlignVCenter
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 1
+
+            Text {
+                width: parent.width
+                text: title || "No data"
+                color: "white"
+                font.family: appFontFamily
+                font.pixelSize: 14
+                font.bold: true
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
+
+            Text {
+                width: parent.width
+                text: version || ""
+                color: "#aaaaaa"
+                font.family: appFontFamily
+                font.pixelSize: 11
+                elide: Text.ElideRight
+                maximumLineCount: 1
+                visible: version !== ""
+            }
+
+            Text {
+                width: parent.width
+                text: "by " + author
+                color: "#aaaaaa"
+                font.family: appFontFamily
+                font.pixelSize: 11
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
         }
     }
 }

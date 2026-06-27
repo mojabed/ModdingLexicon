@@ -59,6 +59,7 @@ private:
     QList<ModInfo> m_mods;
     QMap<QString, QString> m_categoryNames;
     QMap<QString, QString> m_categoryIcons;
+    QString m_discontinuedCategoryId;
 
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;
     QFutureWatcher<void> m_installedCheckWatcher;
