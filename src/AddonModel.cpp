@@ -61,6 +61,9 @@ QVariant AddonModel::data(const QModelIndex& index, int role) const {
     case FormattedDateRole:
         return mod.getFormattedDate();
     case IconSourceRole:
+        if (!mod.categoryId.isEmpty() && m_categoryIcons.contains(mod.categoryId)) {
+            return m_categoryIcons.value(mod.categoryId);
+        }
         return iconForCategoryId(mod.categoryId);
     default:
         return QVariant();
@@ -117,4 +120,21 @@ ModInfo AddonModel::getModAt(int index) const {
         return m_mods.at(index);
     }
     return ModInfo();
+}
+
+void AddonModel::setCategoryIcons(const QMap<QString, QString>& categoryIcons) {
+    if (m_categoryIcons == categoryIcons) {
+        return;
+    }
+
+    m_categoryIcons = categoryIcons;
+
+    if (m_mods.isEmpty()) {
+        return;
+    }
+
+    const int lastRow = m_mods.count() - 1;
+    if (lastRow >= 0) {
+        emit dataChanged(index(0), index(lastRow), {IconSourceRole});
+    }
 }

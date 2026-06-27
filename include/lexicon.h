@@ -46,7 +46,7 @@ private:
     CategoryModel* m_categoryModel;
 
     void populateCategories();
-    void applyCategoryNamesToMods();
+    void applyCategoryMetadataToMods();
     void updateMasterList();
     void updateCategoryList();
     void parseMasterList();
@@ -58,6 +58,7 @@ private:
     QString m_categoryListPath;
     QList<ModInfo> m_mods;
     QMap<QString, QString> m_categoryNames;
+    QMap<QString, QString> m_categoryIcons;
 
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;
     QFutureWatcher<void> m_installedCheckWatcher;

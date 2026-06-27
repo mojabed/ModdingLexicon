@@ -29,11 +29,9 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     connect(m_httpClient, &HttpClient::downloadFinished, this, [this](const QString& filePath) {
         if (filePath == m_masterListPath) {
-            spdlog::info("Master list updated: {}", filePath.toStdString());
             emit masterListReady(filePath);
             parseMasterList();
         } else if (filePath == m_categoryListPath) {
-            spdlog::info("Category list updated: {}", filePath.toStdString());
             parseCategoryList();
         }
     });
@@ -84,7 +82,7 @@ bool Lexicon::loadCachedMasterList() {
 
     checkInstalledAddons();
     m_addonModel->setMods(m_mods);
-    spdlog::info("Loaded {} mods from cache", m_mods.count());
+
     return true;
 }
 
@@ -131,7 +129,9 @@ void Lexicon::parseCategoryList() {
     file.close();
 
     m_categoryNames = Parser::parseCategoryNames(jsonData);
-    applyCategoryNamesToMods();
+    m_categoryIcons = Parser::parseCategoryIcons(jsonData);
+    m_addonModel->setCategoryIcons(m_categoryIcons);
+    applyCategoryMetadataToMods();
 
     if (!m_mods.isEmpty()) {
         populateCategories();
@@ -139,7 +139,6 @@ void Lexicon::parseCategoryList() {
 }
 
 void Lexicon::onParsingFinished() {
-    auto startTime = std::chrono::high_resolution_clock::now();
 
     m_mods = m_parsingWatcher.result();
 
@@ -148,22 +147,17 @@ void Lexicon::onParsingFinished() {
         return;
     }
 
-    applyCategoryNamesToMods();
+    applyCategoryMetadataToMods();
     checkInstalledAddons();
 
     m_addonModel->setMods(m_mods);
+    m_addonModel->setCategoryIcons(m_categoryIcons);
     spdlog::info("Loaded {} mods into model", m_mods.count());
 
     populateCategories();
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    spdlog::info("parseMasterList took {}ms", duration.count());
 }
 
 void Lexicon::checkInstalledAddons() {
-    auto startTime = std::chrono::high_resolution_clock::now();
-
     auto checkFuture = QtConcurrent::run([this]() {
         QString addonsPath = Pathing::getInstance()->paths().addons;
 
@@ -198,32 +192,24 @@ void Lexicon::checkInstalledAddons() {
 }
 
 void Lexicon::onInstalledAddonsCheckFinished() {
-    auto startTime = std::chrono::high_resolution_clock::now();
-
     m_addonModel->setMods(m_mods);
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    spdlog::info("checkInstalledAddons took {}ms", duration.count());
 }
 
-void Lexicon::applyCategoryNamesToMods() {
+void Lexicon::applyCategoryMetadataToMods() {
     for (ModInfo& mod : m_mods) {
-        if (!mod.categoryId.isEmpty() && m_categoryNames.contains(mod.categoryId)) {
-            mod.categoryName = m_categoryNames.value(mod.categoryId);
+        if (!mod.categoryId.isEmpty()) {
+            if (m_categoryNames.contains(mod.categoryId)) {
+                mod.categoryName = m_categoryNames.value(mod.categoryId);
+            }
         }
     }
 }
 
 void Lexicon::populateCategories() {
-    spdlog::info("populateCategories() called");
-
     if (!m_categoryModel) {
-        spdlog::error("m_categoryModel is null!");
+        spdlog::error("m_categoryModel is null");
         return;
     }
-
-    spdlog::info("m_mods count: {}", m_mods.count());
 
     if (m_mods.isEmpty()) {
         spdlog::warn("m_mods is empty, nothing to categorize");
@@ -234,7 +220,6 @@ void Lexicon::populateCategories() {
         QMap<QString, int> categoryMap;
         QMap<QString, QString> categoryNames;
 
-        spdlog::info("Starting to iterate through mods");
         for (int i = 0; i < m_mods.count(); ++i) {
             const ModInfo& mod = m_mods.at(i);
             const QString categoryId = mod.categoryId;
@@ -244,8 +229,6 @@ void Lexicon::populateCategories() {
             }
         }
 
-        spdlog::info("Found {} unique categories", categoryMap.count());
-
         QList<CategoryInfo> categories;
         for (auto it = categoryMap.begin(); it != categoryMap.end(); ++it) {
             CategoryInfo info;
@@ -254,14 +237,14 @@ void Lexicon::populateCategories() {
             info.categoryName = displayName.isEmpty()
                 ? (it.key().isEmpty() ? "Uncategorized" : it.key())
                 : displayName;
-            info.iconSource = iconForCategoryId(it.key());
+            info.iconSource = m_categoryIcons.contains(it.key())
+                ? m_categoryIcons.value(it.key())
+                : iconForCategoryId(it.key());
             info.addonCount = it.value();
             categories.append(info);
         }
 
-        spdlog::info("Created {} category objects, calling setCategories", categories.count());
         m_categoryModel->setCategories(categories);
-        spdlog::info("Populated {} categories", categories.count());
     } catch (const std::exception& e) {
         spdlog::error("Exception in populateCategories: {}", e.what());
     }

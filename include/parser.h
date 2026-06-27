@@ -16,6 +16,7 @@ public:
     static ModInfo fromEsoJson(const QJsonObject& json);
     static QList<ModInfo> parseEsoMods(const QByteArray& jsonData);
     static QMap<QString, QString> parseCategoryNames(const QByteArray& jsonData);
+    static QMap<QString, QString> parseCategoryIcons(const QByteArray& jsonData);
 
 private:
     // Example: https://www.esoui.com/downloads/download<id>-<title>

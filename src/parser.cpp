@@ -42,6 +42,11 @@ QString readCategoryName(const QJsonObject& object) {
     QStringList candidates{"name", "categoryName", "category_name", "title", "label"};
     return readStringValue(object, candidates);
 }
+
+QString readCategoryIconUrl(const QJsonObject& object) {
+    QStringList candidates{"iconUrl", "icon_url", "icon", "imageUrl", "image_url", "thumbnailUrl", "thumbnail_url"};
+    return readStringValue(object, candidates);
+}
 }
 
 ModInfo Parser::fromEsoJson(const QJsonObject& json) {
@@ -287,4 +292,49 @@ QMap<QString, QString> Parser::parseCategoryNames(const QByteArray& jsonData) {
     }
 
     return categories;
+}
+
+QMap<QString, QString> Parser::parseCategoryIcons(const QByteArray& jsonData) {
+    QMap<QString, QString> icons;
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(jsonData, &parseError);
+
+    if (parseError.error != QJsonParseError::NoError) {
+        return icons;
+    }
+
+    auto addCategory = [&](const QJsonObject& object) {
+        const QString id = readCategoryId(object);
+        const QString iconUrl = readCategoryIconUrl(object);
+        if (!id.isEmpty() && !iconUrl.isEmpty()) {
+            icons[id] = iconUrl;
+        }
+    };
+
+    if (document.isArray()) {
+        for (const QJsonValue& value : document.array()) {
+            if (value.isObject()) {
+                addCategory(value.toObject());
+            }
+        }
+    } else if (document.isObject()) {
+        const QJsonObject root = document.object();
+        QList<QString> candidateArrays{"categories", "data", "items", "results"};
+        for (const QString& key : candidateArrays) {
+            if (root.contains(key) && root[key].isArray()) {
+                for (const QJsonValue& value : root[key].toArray()) {
+                    if (value.isObject()) {
+                        addCategory(value.toObject());
+                    }
+                }
+                break;
+            }
+        }
+
+        if (icons.isEmpty()) {
+            addCategory(root);
+        }
+    }
+
+    return icons;
 }

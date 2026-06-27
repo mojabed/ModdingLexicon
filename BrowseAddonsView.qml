@@ -118,9 +118,8 @@ Item {
 
         GridView {
             id: categoryGrid
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
             width: {
                 const itemWidth = 160
                 const margin = 20
@@ -128,6 +127,7 @@ Item {
                 const itemsPerRow = Math.max(1, Math.floor(availableWidth / itemWidth))
                 return Math.min(itemsPerRow * itemWidth, availableWidth)
             }
+            height: Math.max(0, parent.height - 40)
             model: root.lexiconController ? root.lexiconController.categoryModel : null
             cellWidth: 160
             cellHeight: 160
@@ -149,6 +149,7 @@ Item {
                     Image {
                         anchors.horizontalCenter: parent.horizontalCenter
                         source: model.iconSource
+                        asynchronous: true
                         width: 64
                         height: 64
                     }

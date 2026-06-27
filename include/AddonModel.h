@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QObject>
 #include <QtQml>
+#include <QMap>
 
 #include "ModType.h"
 
@@ -74,10 +75,12 @@ public:
     Q_INVOKABLE void setMods(const QList<ModInfo>& mods);
     Q_INVOKABLE void clear();
     Q_INVOKABLE ModInfo getModAt(int index) const;
+    void setCategoryIcons(const QMap<QString, QString>& categoryIcons);
 
 signals:
     void countChanged();
 
 private:
     QList<ModInfo> m_mods;
+    QMap<QString, QString> m_categoryIcons;
 };
