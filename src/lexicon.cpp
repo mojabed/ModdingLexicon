@@ -162,7 +162,6 @@ void Lexicon::onParsingFinished() {
 
     applyCategoryMetadataToMods();
 
-    // Remove mods in the discontinued category
     if (!m_discontinuedCategoryId.isEmpty()) {
         m_mods.erase(std::remove_if(m_mods.begin(), m_mods.end(),
             [this](const ModInfo& mod) { return mod.categoryId == m_discontinuedCategoryId; }),

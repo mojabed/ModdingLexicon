@@ -21,6 +21,40 @@ ApplicationWindow {
     property string selectedCategoryId: ""
     property string selectedCategoryName: ""
     property bool viewingCategoryAddons: false
+    property var activeDetailWindow: null
+
+    function showAddonDetail(data) {
+        if (activeDetailWindow !== null) {
+            activeDetailWindow.close()
+            activeDetailWindow = null
+        }
+
+        var comp = Qt.createComponent("AddonDetailWindow.qml")
+        if (comp.status === Component.Error) {
+            console.error("Failed to create AddonDetailWindow:", comp.errorString())
+            return
+        }
+        var detailWin = comp.createObject(window, {
+            "title": qsTr("Addon Details"),
+            "addonTitle": data.title || "",
+            "addonAuthor": data.author || "",
+            "addonVersion": data.version || "",
+            "addonLastUpdated": data.formattedDate || data.lastUpdated || "",
+            "addonCategory": data.categoryName || "",
+            "addonDownloads": data.downloads || 0,
+            "addonDownloadsMonthly": data.downloadsMonthly || 0,
+            "addonFavorites": data.favorites || 0,
+            "addonIsInstalled": data.isInstalled || false,
+            "addonIconSource": data.iconSource || ""
+        })
+        detailWin.closing.connect(function() {
+            if (activeDetailWindow === detailWin) {
+                activeDetailWindow = null
+            }
+        })
+        activeDetailWindow = detailWin
+        detailWin.show()
+    }
 
     Lexicon {
         id: lexicon
@@ -58,10 +92,15 @@ ApplicationWindow {
         }
 
         MyAddonsView {
+            id: myAddonsView
             width: swipeView.width
             height: swipeView.height
             appFontFamily: window.appFontFamily
             lexiconController: lexicon
+
+            onAddonDetailRequested: function(data) {
+                window.showAddonDetail(data)
+            }
         }
 
         BrowseAddonsView {
@@ -71,6 +110,10 @@ ApplicationWindow {
             appFontFamily: window.appFontFamily
             appWindow: window
             lexiconController: lexicon
+
+            onAddonDetailRequested: function(data) {
+                window.showAddonDetail(data)
+            }
         }
 
         SettingsView {

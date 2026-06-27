@@ -11,6 +11,8 @@ Item {
     property var lexiconController
     property bool isSearching: searchField.text !== ""
 
+    signal addonDetailRequested(var addonData)
+
     function goBack() {
         searchField.clear()
         if (root.appWindow) {
@@ -227,6 +229,8 @@ Item {
                     hoverEnabled: true
                     onEntered: parent.color = "#353535"
                     onExited: parent.color = "#2a2a2a"
+                    onPressed: parent.color = "#311b44"
+                    onReleased: parent.color = containsMouse ? "#353535" : "#2a2a2a"
                     onClicked: {
                         console.log("Category clicked:", model.categoryId, "Count:", model.addonCount)
                         root.appWindow.selectedCategoryId = model.categoryId
@@ -277,6 +281,33 @@ Item {
                 height: 60
                 color: "#2a2a2a"
                 radius: 6
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: parent.color = "#353535"
+                    onExited: parent.color = "#2a2a2a"
+                    onPressed: parent.color = "#311b44"
+                    onReleased: parent.color = containsMouse ? "#353535" : "#2a2a2a"
+                    onClicked: {
+                        root.addonDetailRequested({
+                            "title": model.title,
+                            "author": model.author,
+                            "version": model.version,
+                            "lastUpdated": model.lastUpdated,
+                            "formattedDate": model.formattedDate,
+                            "categoryId": model.categoryId,
+                            "categoryName": model.categoryName,
+                            "downloads": model.downloads || 0,
+                            "downloadsMonthly": model.downloadsMonthly || 0,
+                            "favorites": model.favorites || 0,
+                            "isInstalled": model.isInstalled || false,
+                            "iconSource": model.iconSource,
+                            "fileInfoUri": model.fileInfoUri || "",
+                            "modId": model.modId || ""
+                        })
+                    }
+                }
 
                 Row {
                     anchors.fill: parent

@@ -7,10 +7,22 @@ Rectangle {
     property string appFontFamily: "Segoe UI"
     property url iconSource
 
+    signal addonClicked()
+
     width: ListView.view.width
     height: 60
     color: "#2a2a2a"
     radius: 6
+
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        onEntered: parent.color = "#353535"
+        onExited: parent.color = "#2a2a2a"
+        onPressed: parent.color = "#311b44"
+        onReleased: parent.color = containsMouse ? "#353535" : "#2a2a2a"
+        onClicked: parent.addonClicked()
+    }
 
     Row {
         anchors.fill: parent

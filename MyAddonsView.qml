@@ -10,6 +10,8 @@ Item {
     property var lexiconController
     property bool isSearching: searchField.text !== ""
 
+    signal addonDetailRequested(var addonData)
+
     width: parent ? parent.width : 0
     height: parent ? parent.height : 0
     clip: true
@@ -95,6 +97,25 @@ Item {
             version: model.version
             iconSource: model.iconSource
             appFontFamily: root.appFontFamily
+
+            onAddonClicked: {
+                root.addonDetailRequested({
+                    "title": model.title,
+                    "author": model.author,
+                    "version": model.version,
+                    "lastUpdated": model.lastUpdated,
+                    "formattedDate": model.formattedDate,
+                    "categoryId": model.categoryId,
+                    "categoryName": model.categoryName,
+                    "downloads": model.downloads || 0,
+                    "downloadsMonthly": model.downloadsMonthly || 0,
+                    "favorites": model.favorites || 0,
+                    "isInstalled": model.isInstalled || false,
+                    "iconSource": model.iconSource,
+                    "fileInfoUri": model.fileInfoUri || "",
+                    "modId": model.modId || ""
+                })
+            }
         }
 
         ScrollBar.vertical: ScrollBar {
