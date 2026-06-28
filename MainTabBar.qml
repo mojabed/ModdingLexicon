@@ -21,7 +21,7 @@ TabBar {
     }
 
     font.family: appFontFamily
-    font.pixelSize: 20
+    font.pixelSize: 23
     font.bold: true
 
     TabButton {

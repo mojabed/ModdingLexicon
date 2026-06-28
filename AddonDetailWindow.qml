@@ -20,11 +20,22 @@ ApplicationWindow {
     property url addonIconSource
 
     property string appFontFamily: "Segoe UI"
+    property var lexiconController: null
 
-    width: 480
-    height: 560
-    minimumWidth: 400
-    minimumHeight: 400
+    readonly property string descriptionHtml: {
+        if (lexiconController && addonFileInfoUri)
+            return lexiconController.currentDescription || ""
+        return ""
+    }
+
+    function formatNumber(n) {
+        return n.toLocaleString(Qt.locale(), 'f', 0)
+    }
+
+    width: 900
+    height: 750
+    minimumWidth: 480
+    minimumHeight: 500
 
     Material.theme: Material.Dark
     Material.accent: Material.DeepPurple
@@ -33,29 +44,30 @@ ApplicationWindow {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 16
+        anchors.margins: 16
+        spacing: 10
 
         // Header: icon + title
         RowLayout {
-            spacing: 14
+            spacing: 12
 
             Image {
-                source: detailWindow.addonIconSource
-                width: 48
-                height: 48
+                source: detailWindow.addonIconSource.toString() !== "" ? detailWindow.addonIconSource : ""
+                width: 40
+                height: 40
                 fillMode: Image.PreserveAspectFit
                 Layout.alignment: Qt.AlignTop
+                visible: detailWindow.addonIconSource.toString() !== ""
             }
 
             ColumnLayout {
-                spacing: 2
+                spacing: 1
 
                 Text {
                     text: detailWindow.addonTitle || "Unknown Addon"
                     color: "white"
                     font.family: detailWindow.appFontFamily
-                    font.pixelSize: 20
+                    font.pixelSize: 21
                     font.bold: true
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
@@ -65,36 +77,21 @@ ApplicationWindow {
                     text: "by " + (detailWindow.addonAuthor || "Unknown")
                     color: "#aaaaaa"
                     font.family: detailWindow.appFontFamily
-                    font.pixelSize: 13
+                    font.pixelSize: 14
                 }
             }
         }
 
-        // Divider
-        Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: "#444"
-        }
+        // Compact info row
+        RowLayout {
+            spacing: 20
 
-        // Info grid
-        GridLayout {
-            columns: 2
-            rowSpacing: 10
-            columnSpacing: 16
-
-            InfoLabel { label: "Version"; value: detailWindow.addonVersion }
-            InfoLabel { label: "Updated"; value: detailWindow.addonLastUpdated }
-            InfoLabel { label: "Category"; value: detailWindow.addonCategory }
-            InfoLabel { label: "Downloads"; value: detailWindow.addonDownloads }
-            InfoLabel {
-                label: "Monthly"
-                value: detailWindow.addonDownloadsMonthly
-            }
-            InfoLabel { label: "Favorites"; value: detailWindow.addonFavorites }
-            InfoLabel {
-                label: "Installed"
-                value: detailWindow.addonIsInstalled ? "Yes" : "No"
+            InfoBadge { label: "v" + (detailWindow.addonVersion || "-") }
+            InfoBadge { label: detailWindow.addonCategory || "-" }
+            InfoBadge { label: formatNumber(detailWindow.addonDownloads) + " DL" }
+            InfoBadge {
+                label: detailWindow.addonIsInstalled ? "Installed" : "Not Installed"
+                badgeColor: detailWindow.addonIsInstalled ? "#4caf50" : "#888"
             }
         }
 
@@ -105,49 +102,51 @@ ApplicationWindow {
             color: "#444"
         }
 
-        // Description placeholder
-        Text {
-            text: "Description"
-            color: "white"
-            font.family: detailWindow.appFontFamily
-            font.pixelSize: 14
-            font.bold: true
-        }
-
-        ScrollView {
+        // Description area
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
 
-            Text {
-                text: detailWindow.addonDescription || "No description available."
-                color: "#cccccc"
-                font.family: detailWindow.appFontFamily
-                font.pixelSize: 12
-                wrapMode: Text.WordWrap
-                width: detailWindow.width - 60
+            ScrollView {
+                id: scrollView
+                anchors.fill: parent
+                clip: true
+
+                Text {
+                    id: descriptionText
+                    width: scrollView.width - 20
+                    textFormat: Text.RichText
+                    color: "#cccccc"
+                    linkColor: "#8ab4f8"
+                    font.family: detailWindow.appFontFamily
+                    font.pixelSize: 15
+                    wrapMode: Text.Wrap
+                    text: detailWindow.descriptionHtml || "Loading description..."
+                    leftPadding: 10
+                    rightPadding: 10
+                    topPadding: 10
+
+                    onLinkActivated: function(link) {
+                        Qt.openUrlExternally(link)
+                    }
+                }
+            }
+
+            BusyIndicator {
+                anchors.centerIn: parent
+                running: detailWindow.descriptionHtml === ""
+                Material.accent: Material.DeepPurple
             }
         }
     }
 
-    component InfoLabel: ColumnLayout {
+    component InfoBadge: Text {
         property string label: ""
-        property string value: ""
+        property string badgeColor: "#cccccc"
 
-        spacing: 1
-
-        Text {
-            text: label
-            color: "#888"
-            font.family: detailWindow.appFontFamily
-            font.pixelSize: 11
-        }
-
-        Text {
-            text: value || "-"
-            color: "white"
-            font.family: detailWindow.appFontFamily
-            font.pixelSize: 13
-        }
+        text: label
+        color: badgeColor
+        font.family: detailWindow.appFontFamily
+        font.pixelSize: 14
     }
 }

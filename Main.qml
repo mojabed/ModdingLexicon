@@ -25,8 +25,9 @@ ApplicationWindow {
 
     function showAddonDetail(data) {
         if (activeDetailWindow !== null) {
-            activeDetailWindow.close()
+            var old = activeDetailWindow
             activeDetailWindow = null
+            old.destroy()
         }
 
         var comp = Qt.createComponent("AddonDetailWindow.qml")
@@ -41,17 +42,27 @@ ApplicationWindow {
             "addonVersion": data.version || "",
             "addonLastUpdated": data.formattedDate || data.lastUpdated || "",
             "addonCategory": data.categoryName || "",
+            "addonDescription": data.description || "",
+            "addonFileInfoUri": data.fileInfoUri || "",
             "addonDownloads": data.downloads || 0,
             "addonDownloadsMonthly": data.downloadsMonthly || 0,
             "addonFavorites": data.favorites || 0,
             "addonIsInstalled": data.isInstalled || false,
-            "addonIconSource": data.iconSource || ""
+            "addonIconSource": data.iconSource || "",
+            "lexiconController": lexicon
         })
+
+        if (data.fileInfoUri) {
+            lexicon.fetchAddonDescription(data.fileInfoUri)
+        }
+
         detailWin.closing.connect(function() {
             if (activeDetailWindow === detailWin) {
                 activeDetailWindow = null
+                detailWin.destroy()
             }
         })
+
         activeDetailWindow = detailWin
         detailWin.show()
     }

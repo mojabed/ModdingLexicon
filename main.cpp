@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
+#include <QFontDatabase>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -61,6 +62,12 @@ int main(int argc, char *argv[])
     app.setApplicationName("ModdingLexicon");
 
     setupSpdlog();
+
+    // Load bundled fonts
+    QFontDatabase::addApplicationFont(":/fonts/Roboto-Regular.ttf");
+    QFontDatabase::addApplicationFont(":/fonts/Roboto-Bold.ttf");
+    QFontDatabase::addApplicationFont(":/fonts/Roboto-Italic.ttf");
+    QFontDatabase::addApplicationFont(":/fonts/Roboto-BoldItalic.ttf");
 
     QQmlApplicationEngine engine;
 

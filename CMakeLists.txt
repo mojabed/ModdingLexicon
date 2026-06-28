@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Network Concurrent WebEngineQuick)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -63,7 +63,7 @@ qt_add_qml_module(appModdingLexicon
         src/AddonModel.cpp
         src/AddonFilterModel.cpp
         src/CategoryModel.cpp
-    DEPENDENCIES QtQuick
+    DEPENDENCIES QtQuick QtWebEngineQuick
 )
 
 target_include_directories(appModdingLexicon
@@ -90,6 +90,7 @@ target_link_libraries(appModdingLexicon
     Qt6::QuickControls2
     Qt6::Network
     Qt6::Concurrent
+    Qt6::WebEngineQuick
     spdlog::spdlog
 )
 

@@ -47,7 +47,7 @@ Rectangle {
                 text: title || "No data"
                 color: "white"
                 font.family: appFontFamily
-                font.pixelSize: 14
+                font.pixelSize: 16
                 font.bold: true
                 elide: Text.ElideRight
                 maximumLineCount: 1
@@ -58,7 +58,7 @@ Rectangle {
                 text: version || ""
                 color: "#aaaaaa"
                 font.family: appFontFamily
-                font.pixelSize: 11
+                font.pixelSize: 13
                 elide: Text.ElideRight
                 maximumLineCount: 1
                 visible: version !== ""
@@ -69,7 +69,7 @@ Rectangle {
                 text: "by " + author
                 color: "#aaaaaa"
                 font.family: appFontFamily
-                font.pixelSize: 11
+                font.pixelSize: 13
                 elide: Text.ElideRight
                 maximumLineCount: 1
             }

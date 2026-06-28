@@ -50,7 +50,7 @@ Item {
                 placeholderText: "Search installed addons"
                 selectByMouse: true
                 font.family: root.appFontFamily
-                font.pixelSize: 13
+                font.pixelSize: 15
                 color: "white"
                 background: Rectangle {
                     color: "#2a2a2a"
@@ -71,7 +71,7 @@ Item {
                 text: myAddonsList.count + " result" + (myAddonsList.count !== 1 ? "s" : "")
                 color: "white"
                 font.family: root.appFontFamily
-                font.pixelSize: 14
+                font.pixelSize: 16
                 font.bold: true
                 Layout.alignment: Qt.AlignVCenter
             }

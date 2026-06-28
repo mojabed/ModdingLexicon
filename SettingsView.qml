@@ -11,6 +11,6 @@ Item {
         text: "Settings Page"
         color: "white"
         font.family: root.appFontFamily
-        font.pixelSize: 16
+        font.pixelSize: 18
     }
 }

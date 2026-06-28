@@ -68,7 +68,7 @@ Item {
                 Layout.alignment: Qt.AlignVCenter
                 padding: 0
                 font.family: root.appFontFamily
-                font.pixelSize: 13
+                font.pixelSize: 15
                 font.bold: true
                 hoverEnabled: true
                 onClicked: {
@@ -103,7 +103,7 @@ Item {
                 placeholderText: "Search for more addons"
                 selectByMouse: true
                 font.family: root.appFontFamily
-                font.pixelSize: 13
+                font.pixelSize: 15
                 color: "white"
                 background: Rectangle {
                     color: "#2a2a2a"
@@ -147,7 +147,7 @@ Item {
                 }
                 color: "white"
                 font.family: root.appFontFamily
-                font.pixelSize: 14
+                font.pixelSize: 16
                 font.bold: true
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
@@ -209,7 +209,7 @@ Item {
                         text: model.categoryName
                         color: "#ffffff"
                         font.family: root.appFontFamily
-                        font.pixelSize: 12
+                        font.pixelSize: 16
                         font.bold: true
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
@@ -220,7 +220,7 @@ Item {
                         text: (model.addonCount || 0) + " addon" + ((model.addonCount || 0) !== 1 ? "s" : "")
                         color: "#90EE90"
                         font.family: root.appFontFamily
-                        font.pixelSize: 11
+                        font.pixelSize: 13
                     }
                 }
 
@@ -332,7 +332,7 @@ Item {
                             text: model.title || "No data"
                             color: "white"
                             font.family: root.appFontFamily
-                            font.pixelSize: 14
+                            font.pixelSize: 16
                             font.bold: true
                             elide: Text.ElideRight
                             maximumLineCount: 1
@@ -343,7 +343,7 @@ Item {
                             text: model.version || ""
                             color: "#aaaaaa"
                             font.family: root.appFontFamily
-                            font.pixelSize: 11
+                            font.pixelSize: 13
                             elide: Text.ElideRight
                             maximumLineCount: 1
                             visible: model.version !== ""
@@ -354,7 +354,7 @@ Item {
                             text: "by " + (model.author || "")
                             color: "#aaaaaa"
                             font.family: root.appFontFamily
-                            font.pixelSize: 11
+                            font.pixelSize: 13
                             elide: Text.ElideRight
                             maximumLineCount: 1
                         }

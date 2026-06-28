@@ -7,6 +7,13 @@
 #include <QMap>
 #include <QFile>
 #include <algorithm>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QTimer>
+#include <QPointer>
+#include <QRegularExpression>
+#include <QSharedPointer>
 
 #include "lexicon.h"
 #include "HttpClient.h"
@@ -21,6 +28,7 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     m_addonModel = new AddonModel(this);
     m_installedAddonsFilter = new AddonFilterModel(this);
     m_categoryModel = new CategoryModel(this);
+    m_descriptionFetcher = new QNetworkAccessManager(this);
 
     m_installedAddonsFilter->setSourceModel(m_addonModel);
     m_installedAddonsFilter->setShowInstalledOnly(true);
@@ -117,7 +125,6 @@ void Lexicon::parseMasterList() {
 }
 
 void Lexicon::parseCategoryList() {
-
     QFile file(m_categoryListPath);
     if (!file.open(QIODevice::ReadOnly)) {
         spdlog::error("Failed to open category list file for parsing: {}", m_categoryListPath.toStdString());
@@ -152,7 +159,6 @@ void Lexicon::parseCategoryList() {
 }
 
 void Lexicon::onParsingFinished() {
-
     m_mods = m_parsingWatcher.result();
 
     if (m_mods.isEmpty()) {
@@ -300,5 +306,279 @@ void Lexicon::populateCategories() {
         m_categoryModel->setCategories(categories);
     } catch (const std::exception& e) {
         spdlog::error("Exception in populateCategories: {}", e.what());
+    }
+}
+
+static QString extractDivByClass(const QString& html, const QString& className)
+{
+    QString search = "class=\"" + className + "\"";
+    int start = html.indexOf(search, 0, Qt::CaseInsensitive);
+    if (start == -1) {
+        search = "class='" + className + "'";
+        start = html.indexOf(search, 0, Qt::CaseInsensitive);
+    }
+    if (start == -1)
+        return {};
+
+    start = html.indexOf('>', start);
+    if (start == -1)
+        return {};
+    ++start;
+
+    int depth = 1;
+    int pos = start;
+    while (pos < html.length() && depth > 0) {
+        int open = html.indexOf("<div", pos, Qt::CaseInsensitive);
+        int close = html.indexOf("</div", pos, Qt::CaseInsensitive);
+
+        if (close == -1)
+            break;
+
+        if (open != -1 && open < close) {
+            ++depth;
+            pos = open + 4;
+        } else {
+            --depth;
+            if (depth == 0)
+                return html.mid(start, close - start).trimmed();
+            pos = close + 6;
+        }
+    }
+    return {};
+}
+
+static QString stripTags(const QString& html)
+{
+    QString out;
+    out.reserve(html.size());
+    bool inTag = false;
+    for (const QChar& ch : html) {
+        if (ch == u'<')
+            inTag = true;
+        else if (ch == u'>')
+            inTag = false;
+        else if (!inTag)
+            out += ch;
+    }
+    return out.trimmed();
+}
+
+static QString extractDescription(const QString& html)
+{
+    static const char* descMarkers[] = {
+        "<h2>Description</h2>", "<h3>Description</h3>",
+        "<h2>About</h2>", "<h3>About</h3>",
+        ">Description<", ">Description:</"
+    };
+    for (const char* marker : descMarkers) {
+        int idx = html.indexOf(QLatin1StringView(marker), 0, Qt::CaseInsensitive);
+        if (idx != -1) {
+            int start = html.indexOf(QLatin1Char('>'), idx) + 1;
+            int end = html.length();
+            static const char* stoppers[] = {
+                "<h2", "<h3", "<h4", "<hr", "download",
+                "file-info", "fileinfo", "changelog", "comments"
+            };
+            for (const char* stop : stoppers) {
+                int s = html.indexOf(QLatin1StringView(stop), start, Qt::CaseInsensitive);
+                if (s != -1 && s < end)
+                    end = s;
+            }
+            if (end - start > 100)
+                return html.mid(start, end - start).trimmed();
+        }
+    }
+
+    static const char* classes[] = {
+        "postmessage", "esoui-description", "description",
+        "mod-description", "addon-description"
+    };
+    for (const char* cls : classes) {
+        QString desc = extractDivByClass(html, QString::fromLatin1(cls));
+        if (!desc.isEmpty())
+            return desc;
+    }
+
+    QString out;
+    out.reserve(html.size());
+    int i = 0;
+    while (i < html.size()) {
+        if (html.at(i) == u'<' && i + 6 < html.size()) {
+            QChar c1 = html.at(i + 1);
+            QChar c2 = html.at(i + 2);
+            if ((c1 == u's' || c1 == u'S') && (c2 == u'c' || c2 == u'C')) {
+                int end = html.indexOf(QLatin1StringView("</script>"), i + 7, Qt::CaseInsensitive);
+                if (end != -1) {
+                    out += u' ';
+                    i = end + 9;
+                    continue;
+                }
+            } else if ((c1 == u's' || c1 == u'S') && (c2 == u't' || c2 == u'T')) {
+                int end = html.indexOf(QLatin1StringView("</style>"), i + 6, Qt::CaseInsensitive);
+                if (end != -1) {
+                    out += u' ';
+                    i = end + 8;
+                    continue;
+                }
+            }
+        }
+        out += html.at(i);
+        ++i;
+    }
+
+    QString trimmed = out.trimmed();
+    return trimmed.size() > 100 ? trimmed : QString();
+}
+
+void Lexicon::fetchAddonDescription(const QString& fileInfoUrl)
+{
+    if (fileInfoUrl.isEmpty() || !m_descriptionFetcher)
+        return;
+
+    if (m_currentDescriptionReply) {
+        m_currentDescriptionReply->abort();
+        m_currentDescriptionReply = nullptr;
+    }
+
+    m_currentDescription.clear();
+    emit currentDescriptionChanged();
+
+    QTimer::singleShot(0, this, [this, fileInfoUrl]() {
+        QUrl qurl(fileInfoUrl);
+        QNetworkRequest req(qurl);
+        req.setTransferTimeout(15000);
+        req.setRawHeader("User-Agent", "ModdingLexicon/1.0");
+
+        QNetworkReply* reply = m_descriptionFetcher->get(req);
+        m_currentDescriptionReply = reply;
+
+        connect(reply, &QNetworkReply::finished, this, [this, reply, fileInfoUrl]() {
+            reply->deleteLater();
+
+            if (m_currentDescriptionReply == reply)
+                m_currentDescriptionReply = nullptr;
+
+            if (reply->error() != QNetworkReply::NoError) {
+                emit addonDescriptionReady(fileInfoUrl, QString());
+                return;
+            }
+
+            const QString html = QString::fromUtf8(reply->readAll());
+
+            QPointer<Lexicon> self(this);
+            QtConcurrent::run([self, html, fileInfoUrl]() {
+                if (!self)
+                    return;
+
+                QString desc = extractDescription(html);
+
+                QStringList imageUrls;
+                static const QRegularExpression imgSrcRe(
+                    QStringLiteral("<img[^>]+src=[\"']([^\"']+)[\"']"),
+                    QRegularExpression::CaseInsensitiveOption);
+                auto imgIt = imgSrcRe.globalMatch(html);
+                while (imgIt.hasNext()) {
+                    auto m = imgIt.next();
+                    QString src = m.captured(1).trimmed();
+                    if (!src.isEmpty())
+                        imageUrls.append(src);
+                }
+
+                static const QRegularExpression resourceTags(
+                    QStringLiteral("<(img|video|audio|source|iframe|link)[^>]*>"),
+                    QRegularExpression::CaseInsensitiveOption);
+                desc.remove(resourceTags);
+
+                QMetaObject::invokeMethod(self, [self, desc, fileInfoUrl, imageUrls]() {
+                    if (!self)
+                        return;
+                    self->m_currentDescription = desc;
+                    emit self->currentDescriptionChanged();
+                    emit self->addonDescriptionReady(fileInfoUrl, desc);
+
+                    if (!imageUrls.isEmpty())
+                        self->lazyLoadDescriptionImages(fileInfoUrl, desc, imageUrls);
+                }, Qt::QueuedConnection);
+            });
+        });
+    });
+}
+void Lexicon::lazyLoadDescriptionImages(const QString& fileInfoUrl,
+                                        const QString& baseDescription,
+                                        const QStringList& imageUrls)
+{
+    const QString cacheDir = Pathing::getInstance()->paths().appData + "/image_cache";
+    QDir().mkpath(cacheDir);
+
+    struct DownloadCtx {
+        QMap<QString, QString> urlToPath;
+        int pending = 0;
+        QString description;
+        QString fileInfoUrl;
+        QPointer<Lexicon> self;
+    };
+
+    auto ctx = QSharedPointer<DownloadCtx>::create();
+    ctx->description = baseDescription;
+    ctx->fileInfoUrl = fileInfoUrl;
+    ctx->self = this;
+
+    for (const QString& imgUrl : imageUrls) {
+        QUrl resolved = QUrl(fileInfoUrl).resolved(QUrl(imgUrl));
+        if (!resolved.isValid() || resolved.scheme().isEmpty())
+            continue;
+
+        QString cacheKey = QString::number(qHash(resolved.toString()));
+        QString cachedPath = cacheDir + "/" + cacheKey;
+        if (QFile::exists(cachedPath)) {
+            ctx->urlToPath[imgUrl] = cachedPath;
+            continue;
+        }
+
+        QNetworkRequest imgReq(resolved);
+        imgReq.setTransferTimeout(10000);
+        imgReq.setRawHeader("User-Agent", "ModdingLexicon/1.0");
+
+        QNetworkReply* imgReply = m_descriptionFetcher->get(imgReq);
+        ctx->pending++;
+
+        connect(imgReply, &QNetworkReply::finished, this,
+            [ctx, imgReply, imgUrl, cacheDir, cacheKey, cachedPath]() {
+                imgReply->deleteLater();
+                ctx->pending--;
+
+                if (imgReply->error() == QNetworkReply::NoError) {
+                    QFile file(cachedPath);
+                    if (file.open(QIODevice::WriteOnly)) {
+                        file.write(imgReply->readAll());
+                        file.close();
+                        ctx->urlToPath[imgUrl] = cachedPath;
+                    }
+                }
+
+                if (ctx->pending == 0 && ctx->self) {
+                    QString enriched = ctx->description;
+                    for (auto it = ctx->urlToPath.begin();
+                         it != ctx->urlToPath.end(); ++it) {
+                        enriched += QStringLiteral("<br><img src=\"file:///%1\">")
+                                        .arg(it.value());
+                    }
+                    ctx->self->m_currentDescription = enriched;
+                    emit ctx->self->currentDescriptionChanged();
+                    emit ctx->self->addonDescriptionReady(
+                        ctx->fileInfoUrl, enriched);
+                }
+            });
+    }
+
+    if (ctx->pending == 0 && !ctx->urlToPath.isEmpty()) {
+        QString enriched = ctx->description;
+        for (auto it = ctx->urlToPath.begin(); it != ctx->urlToPath.end(); ++it) {
+            enriched += QStringLiteral("<br><img src=\"file:///%1\">")
+                            .arg(it.value());
+        }
+        m_currentDescription = enriched;
+        emit currentDescriptionChanged();
+        emit addonDescriptionReady(fileInfoUrl, enriched);
     }
 }
