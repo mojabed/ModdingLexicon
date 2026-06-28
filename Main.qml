@@ -27,6 +27,7 @@ ApplicationWindow {
         if (activeDetailWindow !== null) {
             var old = activeDetailWindow
             activeDetailWindow = null
+            lexicon.fetchAddonDescription("")  // cancel old image downloads
             old.destroy()
         }
 

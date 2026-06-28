@@ -2,10 +2,8 @@
 
 #include <QObject>
 #include <QtQml>
-#include <QDateTime>
 #include <QFutureWatcher>
 #include <QMap>
-#include <QPointer>
 
 #include "ModType.h"
 #include "CategoryModel.h"
@@ -13,8 +11,7 @@
 class HttpClient;
 class AddonModel;
 class AddonFilterModel;
-class QNetworkAccessManager;
-class QNetworkReply;
+class DescriptionFetcher;
 
 class Lexicon : public QObject {
     Q_OBJECT
@@ -61,8 +58,7 @@ private:
     void parseMasterList();
     void parseCategoryList();
     void checkInstalledAddons();
-     void lazyLoadDescriptionImages(const QString& fileInfoUrl, const QString& baseDescription, const QStringList& imageUrls);
-   bool loadCachedMasterList();
+    bool loadCachedMasterList();
 
     QString m_masterListPath;
     QString m_categoryListPath;
@@ -74,7 +70,6 @@ private:
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;
     QFutureWatcher<void> m_installedCheckWatcher;
 
-    QNetworkAccessManager* m_descriptionFetcher = nullptr;
-    QPointer<QNetworkReply> m_currentDescriptionReply;
+    DescriptionFetcher* m_descriptionFetcher = nullptr;
     QString m_currentDescription;
 };

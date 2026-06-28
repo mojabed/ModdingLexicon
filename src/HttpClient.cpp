@@ -4,7 +4,6 @@
 #include <QSaveFile>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
-#include <QNetworkRequest>
 
 HttpClient::HttpClient(int maxConcurrentDownloads, QObject* parent)
     : QObject(parent), m_maxConcurrentDownloads(maxConcurrentDownloads) {

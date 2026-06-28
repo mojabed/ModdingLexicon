@@ -1,9 +1,6 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
-#include <QDateTime>
-#include <QUrl>
-#include <QMap>
 
 #include "parser.h"
 

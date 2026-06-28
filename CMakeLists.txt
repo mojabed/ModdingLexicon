@@ -15,6 +15,8 @@ add_subdirectory(external/spdlog)
 set(PROJECT_SOURCES
     src/pathing.cpp
     src/lexicon.cpp
+    src/descriptionparser.cpp
+    src/descriptionfetcher.cpp
     src/parser.cpp
     src/HttpClient.cpp
     src/AddonModel.cpp
@@ -26,6 +28,8 @@ set(PROJECT_HEADERS
     include/pathing.h
     include/ModType.h
     include/lexicon.h
+    include/descriptionparser.h
+    include/descriptionfetcher.h
     include/parser.h
     include/HttpClient.h
     include/CategoryModel.h
@@ -56,6 +60,7 @@ qt_add_qml_module(appModdingLexicon
         AddonDetailWindow.qml
     SOURCES
         include/lexicon.h
+        include/descriptionfetcher.h
         include/AddonModel.h
         include/AddonFilterModel.h
         include/CategoryModel.h
@@ -72,6 +77,10 @@ target_include_directories(appModdingLexicon
 )
 
 target_compile_options(appModdingLexicon PRIVATE /EHsc)
+
+target_compile_definitions(appModdingLexicon PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CLANG_COROUTINE_MESSAGE>
+)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
@@ -93,6 +102,21 @@ target_link_libraries(appModdingLexicon
     Qt6::WebEngineQuick
     spdlog::spdlog
 )
+
+# Auto deploy Qt DLLs
+if(WIN32)
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt
+        HINTS "${QT6_INSTALL_PREFIX}/bin"
+    )
+    if(WINDEPLOYQT_EXECUTABLE)
+        add_custom_command(TARGET appModdingLexicon POST_BUILD
+            COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+                --qmldir "${CMAKE_CURRENT_SOURCE_DIR}"
+                "$<TARGET_FILE:appModdingLexicon>"
+            COMMENT "Deploying Qt runtime dependencies..."
+        )
+    endif()
+endif()
 
 include(GNUInstallDirs)
 install(TARGETS appModdingLexicon
