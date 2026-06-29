@@ -112,19 +112,22 @@ ApplicationWindow {
                 anchors.fill: parent
                 clip: true
 
-                Text {
+                TextEdit {
                     id: descriptionText
                     width: scrollView.width - 20
-                    textFormat: Text.RichText
+                    readOnly: true
+                    selectByMouse: true
+                    textFormat: TextEdit.RichText
                     color: "#cccccc"
-                    linkColor: "#8ab4f8"
                     font.family: detailWindow.appFontFamily
                     font.pixelSize: 15
-                    wrapMode: Text.Wrap
+                    wrapMode: TextEdit.Wrap
                     text: detailWindow.descriptionHtml || "Loading description..."
                     leftPadding: 10
                     rightPadding: 10
                     topPadding: 10
+                    activeFocusOnPress: true
+                    persistentSelection: false
 
                     onLinkActivated: function(link) {
                         if (link.startsWith("file:///")) {
