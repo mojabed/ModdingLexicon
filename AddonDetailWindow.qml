@@ -127,7 +127,12 @@ ApplicationWindow {
                     topPadding: 10
 
                     onLinkActivated: function(link) {
-                        Qt.openUrlExternally(link)
+                        if (link.startsWith("file:///")) {
+                            imageOverlay.source = link
+                            imageOverlay.open()
+                        } else {
+                            Qt.openUrlExternally(link)
+                        }
                     }
                 }
             }
@@ -136,6 +141,59 @@ ApplicationWindow {
                 anchors.centerIn: parent
                 running: detailWindow.descriptionHtml === ""
                 Material.accent: Material.DeepPurple
+            }
+        }
+    }
+
+    Popup {
+        id: imageOverlay
+        modal: true
+        dim: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        anchors.centerIn: parent
+        width: Math.min(parent.width - 40, fullImage.sourceSize.width > 0 ? fullImage.sourceSize.width + 16 : parent.width - 40)
+        height: Math.min(parent.height - 40, fullImage.sourceSize.height > 0 ? fullImage.sourceSize.height + 44 : parent.height - 40)
+        padding: 0
+        background: Rectangle {
+            color: "#111"
+            radius: 8
+            border.color: "#555"
+        }
+
+        property alias source: fullImage.source
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 6
+
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                Label {
+                    text: "\u00D7"
+                    color: "#ccc"
+                    font.pixelSize: 22
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: imageOverlay.close()
+                    }
+                }
+            }
+
+            Image {
+                id: fullImage
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                onStatusChanged: {
+                    if (status === Image.Ready) {
+                        imageOverlay.width = Math.min(sourceSize.width + 16, imageOverlay.parent.width - 40)
+                        imageOverlay.height = Math.min(sourceSize.height + 44, imageOverlay.parent.height - 40)
+                    }
+                }
             }
         }
     }

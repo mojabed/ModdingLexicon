@@ -6,8 +6,10 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QRegularExpression>
+#include <QSet>
 #include <QTimer>
 #include <QtConcurrent>
+#include <functional>
 
 DescriptionFetcher::DescriptionFetcher(QObject* parent)
     : QObject(parent)
@@ -61,16 +63,50 @@ void DescriptionFetcher::fetch(const QString& fileInfoUrl)
                 QString fileinfoPicsHtml = extractDivByClass(html, QStringLiteral("fileinfo-pics"));
                 QString combinedImagesHtml = postmessageHtml + fileinfoPicsHtml;
 
-                QStringList imageUrls;
-                static const QRegularExpression imgSrcRe(
-                    QStringLiteral("<img[^>]+src=[\"']([^\"']+)[\"']"),
+                QList<QPair<QString, QString>> imagePairs;
+                QSet<QString> seenThumbs;
+
+                static const QRegularExpression anchorImgRe(
+                    QStringLiteral("<a[^>]+href=[\"']([^\"']+)[\"'][^>]*>\\s*<img[^>]+src=[\"']([^\"']+)[\"']"),
                     QRegularExpression::CaseInsensitiveOption);
-                auto imgIt = imgSrcRe.globalMatch(combinedImagesHtml);
-                while (imgIt.hasNext()) {
-                    auto m = imgIt.next();
-                    QString src = m.captured(1).trimmed();
-                    if (!src.isEmpty())
-                        imageUrls.append(src);
+                auto anchorIt = anchorImgRe.globalMatch(combinedImagesHtml);
+                while (anchorIt.hasNext()) {
+                    auto m = anchorIt.next();
+                    QString fullUrl = m.captured(1).trimmed();
+                    QString thumbUrl = m.captured(2).trimmed();
+                    if (!thumbUrl.isEmpty() && !seenThumbs.contains(thumbUrl)) {
+                        seenThumbs.insert(thumbUrl);
+                        imagePairs.append({thumbUrl, fullUrl.isEmpty() ? thumbUrl : fullUrl});
+                    }
+                }
+
+                static const QRegularExpression dataSrcRe(
+                    QStringLiteral("<img[^>]+src=[\"']([^\"']+)[\"'][^>]+(?:data-src|data-full|data-original)=[\"']([^\"']+)[\"']"),
+                    QRegularExpression::CaseInsensitiveOption);
+                auto dataIt = dataSrcRe.globalMatch(combinedImagesHtml);
+                while (dataIt.hasNext()) {
+                    auto m = dataIt.next();
+                    QString thumbUrl = m.captured(1).trimmed();
+                    QString fullUrl = m.captured(2).trimmed();
+                    if (!thumbUrl.isEmpty() && !seenThumbs.contains(thumbUrl)) {
+                        seenThumbs.insert(thumbUrl);
+                        imagePairs.append({thumbUrl, fullUrl});
+                    }
+                }
+
+                if (imagePairs.isEmpty()) {
+                    static const QRegularExpression imgSrcRe(
+                        QStringLiteral("<img[^>]+src=[\"']([^\"']+)[\"']"),
+                        QRegularExpression::CaseInsensitiveOption);
+                    auto imgIt = imgSrcRe.globalMatch(combinedImagesHtml);
+                    while (imgIt.hasNext()) {
+                        auto m = imgIt.next();
+                        QString src = m.captured(1).trimmed();
+                        if (!src.isEmpty() && !seenThumbs.contains(src)) {
+                            seenThumbs.insert(src);
+                            imagePairs.append({src, src});
+                        }
+                    }
                 }
 
                 static const QRegularExpression resourceTags(
@@ -78,15 +114,15 @@ void DescriptionFetcher::fetch(const QString& fileInfoUrl)
                     QRegularExpression::CaseInsensitiveOption);
                 desc.remove(resourceTags);
 
-                // Phase 1: emit text-only description immediately
-                QMetaObject::invokeMethod(self, [self, desc, fileInfoUrl, imageUrls]() {
+                // Text only description immediately
+                QMetaObject::invokeMethod(self, [self, desc, fileInfoUrl, imagePairs]() {
                     if (!self)
                         return;
                     emit self->descriptionReady(fileInfoUrl, desc);
 
-                    // Phase 2: load images in background
-                    if (!imageUrls.isEmpty())
-                        self->lazyLoadImages(fileInfoUrl, desc, imageUrls);
+                    // Load images in background
+                    if (!imagePairs.isEmpty())
+                        self->lazyLoadImages(fileInfoUrl, desc, imagePairs);
                 }, Qt::QueuedConnection);
             });
         });
@@ -110,7 +146,7 @@ void DescriptionFetcher::cancel()
 
 void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
                                          const QString& baseDescription,
-                                         const QStringList& imageUrls)
+                                         const QList<QPair<QString, QString>>& imagePairs)
 {
     const QString cacheDir = Pathing::getInstance()->paths().appData + "/image_cache";
     QDir().mkpath(cacheDir);
@@ -118,7 +154,7 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
     static QHash<QString, QString> s_memCache;
 
     struct DownloadCtx {
-        QMap<QString, QString> urlToPath;
+        QMap<QString, QPair<QString, QString>> urlToPath; // thumbUrl -> (thumbLocal, fullLocal)
         int pending = 0;
         QString description;
         QString fileInfoUrl;
@@ -130,22 +166,72 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
     ctx->fileInfoUrl = fileInfoUrl;
     ctx->self = this;
 
-    for (const QString& imgUrl : imageUrls) {
-        QUrl resolved = QUrl(fileInfoUrl).resolved(QUrl(imgUrl));
-        if (!resolved.isValid() || resolved.scheme().isEmpty())
-            continue;
+    std::function<void()> emitDescription = [ctx, cacheDir, fileInfoUrl, imagePairs]() {
+        if (!ctx->self)
+            return;
 
-        QString cacheKey = QString::number(qHash(resolved.toString()));
-        QString cachedPath = cacheDir + "/" + cacheKey;
+        ctx->urlToPath.clear();
+        for (const auto& pair : imagePairs) {
+            const QString& thumbUrl = pair.first;
+            const QString& fullUrl = pair.second;
 
-        if (s_memCache.contains(resolved.toString())) {
-            ctx->urlToPath[imgUrl] = s_memCache[resolved.toString()];
-            continue;
+            QUrl resolvedThumb = QUrl(fileInfoUrl).resolved(QUrl(thumbUrl));
+            QString thumbCacheKey = QString::number(qHash(resolvedThumb.toString()));
+            QString thumbCachedPath = cacheDir + "/" + thumbCacheKey;
+            QString thumbLocalPath;
+            if (s_memCache.contains(resolvedThumb.toString()))
+                thumbLocalPath = s_memCache[resolvedThumb.toString()];
+            else if (QFile::exists(thumbCachedPath)) {
+                thumbLocalPath = thumbCachedPath;
+                s_memCache[resolvedThumb.toString()] = thumbCachedPath;
+            }
+            if (thumbLocalPath.isEmpty())
+                continue;
+
+            QString fullLocalPath = thumbLocalPath;
+            if (fullUrl != thumbUrl) {
+                QUrl resolvedFull = QUrl(fileInfoUrl).resolved(QUrl(fullUrl));
+                QString fullCacheKey = QString::number(qHash(resolvedFull.toString()));
+                QString fullCachedPath = cacheDir + "/" + fullCacheKey;
+                if (s_memCache.contains(resolvedFull.toString()))
+                    fullLocalPath = s_memCache[resolvedFull.toString()];
+                else if (QFile::exists(fullCachedPath)) {
+                    fullLocalPath = fullCachedPath;
+                    s_memCache[resolvedFull.toString()] = fullCachedPath;
+                } else {
+                    continue; // full size images not ready yet
+                }
+            }
+
+            ctx->urlToPath[thumbUrl] = {thumbLocalPath, fullLocalPath};
         }
+
+        if (ctx->urlToPath.isEmpty())
+            return;
+
+        QString enriched = ctx->description;
+        enriched += QStringLiteral("<br>");
+        for (auto it = ctx->urlToPath.begin(); it != ctx->urlToPath.end(); ++it) {
+            const auto& paths = it.value();
+            enriched += QStringLiteral("<a href=\"file:///%1\"><img src=\"file:///%2\"></a> ")
+                            .arg(paths.second, paths.first);
+        }
+        emit ctx->self->descriptionReady(ctx->fileInfoUrl, enriched);
+    };
+
+    auto downloadImage = [this, ctx, cacheDir, &emitDescription](const QString& url,
+                                                const QString& cacheKey,
+                                                const QString& cachedPath) {
+        QUrl resolved = QUrl(ctx->fileInfoUrl).resolved(QUrl(url));
+        if (!resolved.isValid() || resolved.scheme().isEmpty())
+            return false;
+
+        if (s_memCache.contains(resolved.toString()))
+            return true; // already in cache, caller should use s_memCache
+
         if (QFile::exists(cachedPath)) {
             s_memCache[resolved.toString()] = cachedPath;
-            ctx->urlToPath[imgUrl] = cachedPath;
-            continue;
+            return true;
         }
 
         QNetworkRequest imgReq(resolved);
@@ -157,7 +243,7 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
         ctx->pending++;
 
         connect(imgReply, &QNetworkReply::finished, this,
-            [ctx, imgReply, imgUrl, cacheDir, cacheKey, cachedPath, resolved]() {
+            [ctx, imgReply, cacheDir, cacheKey, cachedPath, resolved, emitDescription]() {
                 imgReply->deleteLater();
                 ctx->pending--;
 
@@ -169,7 +255,6 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
                     if (file.open(QIODevice::WriteOnly)) {
                         file.write(imgReply->readAll());
                         file.close();
-                        ctx->urlToPath[imgUrl] = cachedPath;
                         s_memCache[resolved.toString()] = cachedPath;
 
                         if (ctx->self)
@@ -177,28 +262,35 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
                     }
                 }
 
-                if (ctx->pending == 0 && ctx->self) {
-                    QString enriched = ctx->description;
-                    enriched += QStringLiteral("<br>");
-                    for (auto it = ctx->urlToPath.begin();
-                         it != ctx->urlToPath.end(); ++it) {
-                        enriched += QStringLiteral("<img src=\"file:///%1\"> ")
-                                        .arg(it.value());
-                    }
-                    emit ctx->self->descriptionReady(ctx->fileInfoUrl, enriched);
-                }
+                if (ctx->pending == 0 && ctx->self)
+                    emitDescription();
             });
+        return false; // downloading
+    };
+
+    for (const auto& pair : imagePairs) {
+        const QString& thumbUrl = pair.first;
+        const QString& fullUrl = pair.second;
+
+        QString thumbCacheKey = QString::number(qHash(QUrl(fileInfoUrl).resolved(QUrl(thumbUrl)).toString()));
+        QString thumbCachedPath = cacheDir + "/" + thumbCacheKey;
+
+        QUrl resolvedThumb = QUrl(fileInfoUrl).resolved(QUrl(thumbUrl));
+        if (!s_memCache.contains(resolvedThumb.toString()) && !QFile::exists(thumbCachedPath))
+            downloadImage(thumbUrl, thumbCacheKey, thumbCachedPath);
+
+        if (fullUrl != thumbUrl) {
+            QString fullCacheKey = QString::number(qHash(QUrl(fileInfoUrl).resolved(QUrl(fullUrl)).toString()));
+            QString fullCachedPath = cacheDir + "/" + fullCacheKey;
+
+            QUrl resolvedFull = QUrl(fileInfoUrl).resolved(QUrl(fullUrl));
+            if (!s_memCache.contains(resolvedFull.toString()) && !QFile::exists(fullCachedPath))
+                downloadImage(fullUrl, fullCacheKey, fullCachedPath);
+        }
     }
 
-    if (ctx->pending == 0 && !ctx->urlToPath.isEmpty()) {
-        QString enriched = ctx->description;
-        enriched += QStringLiteral("<br>");
-        for (auto it = ctx->urlToPath.begin(); it != ctx->urlToPath.end(); ++it) {
-            enriched += QStringLiteral("<img src=\"file:///%1\"> ")
-                            .arg(it.value());
-        }
-        emit descriptionReady(fileInfoUrl, enriched);
-    }
+    if (ctx->pending == 0)
+        emitDescription();
 }
 
 void DescriptionFetcher::pruneImageCache(const QString& cacheDir)

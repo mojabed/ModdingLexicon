@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QPair>
 #include <QPointer>
 #include <QString>
 #include <QList>
@@ -24,7 +25,7 @@ signals:
 private:
     void lazyLoadImages(const QString& fileInfoUrl,
                         const QString& baseDescription,
-                        const QStringList& imageUrls);
+                        const QList<QPair<QString, QString>>& imagePairs);
 
     QNetworkAccessManager* m_nam = nullptr;
     QPointer<QNetworkReply> m_currentReply;
