@@ -14,6 +14,7 @@ ApplicationWindow {
     minimumWidth: 640
     minimumHeight: 480
     flags: Qt.FramelessWindowHint | Qt.Window
+    color: "#1e1e1e"
 
     Material.theme: Material.Dark
     Material.accent: Material.DeepPurple
@@ -78,6 +79,8 @@ ApplicationWindow {
 
     ColumnLayout {
         anchors.fill: parent
+        anchors.topMargin: 4
+        anchors.bottomMargin: 4
         spacing: 1
 
         Rectangle {
@@ -197,6 +200,53 @@ ApplicationWindow {
             appFontFamily: window.appFontFamily
         }
     }
+    }
+
+    // Window resize handles
+    MouseArea {
+        id: resizeLeft
+        anchors.top: parent.top; anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        width: 4; cursorShape: Qt.SizeHorCursor
+        onPressed: window.startSystemResize(Qt.LeftEdge)
+    }
+    MouseArea {
+        id: resizeRight
+        anchors.top: parent.top; anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        width: 4; cursorShape: Qt.SizeHorCursor
+        onPressed: window.startSystemResize(Qt.RightEdge)
+    }
+    MouseArea {
+        id: resizeBottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left; anchors.right: parent.right
+        height: 4; cursorShape: Qt.SizeVerCursor
+        onPressed: window.startSystemResize(Qt.BottomEdge)
+    }
+    MouseArea {
+        id: resizeTopLeft
+        anchors.top: parent.top; anchors.left: parent.left
+        width: 8; height: 8; cursorShape: Qt.SizeFDiagCursor
+        onPressed: window.startSystemResize(Qt.TopEdge | Qt.LeftEdge)
+    }
+    MouseArea {
+        id: resizeTopRight
+        anchors.top: parent.top; anchors.right: parent.right
+        width: 8; height: 8; cursorShape: Qt.SizeBDiagCursor
+        onPressed: window.startSystemResize(Qt.TopEdge | Qt.RightEdge)
+    }
+    MouseArea {
+        id: resizeBottomLeft
+        anchors.bottom: parent.bottom; anchors.left: parent.left
+        width: 8; height: 8; cursorShape: Qt.SizeBDiagCursor
+        onPressed: window.startSystemResize(Qt.BottomEdge | Qt.LeftEdge)
+    }
+    MouseArea {
+        id: resizeBottomRight
+        anchors.bottom: parent.bottom; anchors.right: parent.right
+        width: 8; height: 8; cursorShape: Qt.SizeFDiagCursor
+        onPressed: window.startSystemResize(Qt.BottomEdge | Qt.RightEdge)
     }
 
     component TitleBarButton: Rectangle {
