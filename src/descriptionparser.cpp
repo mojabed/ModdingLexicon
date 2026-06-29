@@ -1,6 +1,6 @@
 #include "descriptionparser.h"
 
-static QString extractDivByClass(const QString& html, const QString& className)
+QString extractDivByClass(const QString& html, const QString& className)
 {
     QString search = "class=\"" + className + "\"";
     int start = html.indexOf(search, 0, Qt::CaseInsensitive);
@@ -54,6 +54,7 @@ static QString stripTags(const QString& html)
     return out.trimmed();
 }
 
+// Get the description first so images can load later
 QString extractDescription(const QString& html)
 {
     static const char* descMarkers[] = {

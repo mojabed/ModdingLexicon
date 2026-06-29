@@ -211,7 +211,6 @@ void Lexicon::checkInstalledAddons() {
         installedDirsSet.reserve(installedDirs.size());
         for (const QString& dir : installedDirs) {
             installedDirsSet.insert(dir.toLower());
-            spdlog::debug("Installed dir: '{}'", dir.toStdString());
         }
 
         int matchedCount = 0;
@@ -235,8 +234,6 @@ void Lexicon::checkInstalledAddons() {
                         mod.isInstalled = true;
                         mod.installPath = addonsDir.filePath(dir);
                         matchedCount++;
-                        spdlog::debug("Normalized match: title='{}' -> dir='{}'",
-                                      mod.title.toStdString(), dir.toStdString());
                         break;
                     }
                 }

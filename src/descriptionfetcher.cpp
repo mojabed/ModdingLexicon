@@ -56,11 +56,16 @@ void DescriptionFetcher::fetch(const QString& fileInfoUrl)
 
                 QString desc = extractDescription(html);
 
+                // Only extract images from the two relevant container classes
+                QString postmessageHtml = extractDivByClass(html, QStringLiteral("postmessage"));
+                QString fileinfoPicsHtml = extractDivByClass(html, QStringLiteral("fileinfo-pics"));
+                QString combinedImagesHtml = postmessageHtml + fileinfoPicsHtml;
+
                 QStringList imageUrls;
                 static const QRegularExpression imgSrcRe(
                     QStringLiteral("<img[^>]+src=[\"']([^\"']+)[\"']"),
                     QRegularExpression::CaseInsensitiveOption);
-                auto imgIt = imgSrcRe.globalMatch(html);
+                auto imgIt = imgSrcRe.globalMatch(combinedImagesHtml);
                 while (imgIt.hasNext()) {
                     auto m = imgIt.next();
                     QString src = m.captured(1).trimmed();
@@ -174,9 +179,10 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
 
                 if (ctx->pending == 0 && ctx->self) {
                     QString enriched = ctx->description;
+                    enriched += QStringLiteral("<br>");
                     for (auto it = ctx->urlToPath.begin();
                          it != ctx->urlToPath.end(); ++it) {
-                        enriched += QStringLiteral("<br><img src=\"file:///%1\">")
+                        enriched += QStringLiteral("<img src=\"file:///%1\"> ")
                                         .arg(it.value());
                     }
                     emit ctx->self->descriptionReady(ctx->fileInfoUrl, enriched);
@@ -186,8 +192,9 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
 
     if (ctx->pending == 0 && !ctx->urlToPath.isEmpty()) {
         QString enriched = ctx->description;
+        enriched += QStringLiteral("<br>");
         for (auto it = ctx->urlToPath.begin(); it != ctx->urlToPath.end(); ++it) {
-            enriched += QStringLiteral("<br><img src=\"file:///%1\">")
+            enriched += QStringLiteral("<img src=\"file:///%1\"> ")
                             .arg(it.value());
         }
         emit descriptionReady(fileInfoUrl, enriched);
