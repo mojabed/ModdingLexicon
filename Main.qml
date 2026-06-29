@@ -11,8 +11,9 @@ ApplicationWindow {
     height: 720
     visible: true
     title: qsTr("Modding Lexicon")
-    minimumWidth: 640   
+    minimumWidth: 640
     minimumHeight: 480
+    flags: Qt.FramelessWindowHint | Qt.Window
 
     Material.theme: Material.Dark
     Material.accent: Material.DeepPurple
@@ -22,6 +23,9 @@ ApplicationWindow {
     property string selectedCategoryName: ""
     property bool viewingCategoryAddons: false
     property var activeDetailWindow: null
+
+    // Custom title bar height
+    readonly property int titleBarHeight: 32
 
     function showAddonDetail(data) {
         if (activeDetailWindow !== null) {
@@ -72,24 +76,83 @@ ApplicationWindow {
         id: lexicon
     }
 
-    MainTabBar {
-        id: bar
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        appFontFamily: window.appFontFamily
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 1
 
-        onBrowseTabReclicked: {
-            browseAddonsView.goBack()
+        Rectangle {
+            id: titleBar
+            Layout.fillWidth: true
+            Layout.preferredHeight: window.titleBarHeight
+            color: "#141414"
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                onPressed: window.startSystemMove()
+                onDoubleClicked: window.visibility === Window.Maximized
+                    ? window.showNormal() : window.showMaximized()
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 4
+                spacing: 0
+
+                Image {
+                    source: "qrc:/icons/app_icon.png"
+                    width: 16
+                    height: 16
+                    fillMode: Image.PreserveAspectFit
+                }
+
+                Text {
+                    text: window.title
+                    color: "#cccccc"
+                    font.family: window.appFontFamily
+                    font.pixelSize: 12
+                    leftPadding: 8
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                }
+
+                // Minimize
+                TitleBarButton {
+                    text: "\u2212"
+                    onClicked: window.showMinimized()
+                }
+
+                // Maximize
+                TitleBarButton {
+                    text: window.visibility === Window.Maximized ? "\u29C9" : "\u25A1"
+                    onClicked: window.visibility === Window.Maximized
+                        ? window.showNormal() : window.showMaximized()
+                }
+
+                // Close
+                TitleBarButton {
+                    text: "\u00D7"
+                    isClose: true
+                    onClicked: window.close()
+                }
+            }
         }
-    }
+
+        MainTabBar {
+            id: bar
+            Layout.fillWidth: true
+            appFontFamily: window.appFontFamily
+
+            onBrowseTabReclicked: {
+                browseAddonsView.goBack()
+            }
+        }
 
     SwipeView {
         id: swipeView
-        anchors.top: bar.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        Layout.fillWidth: true
+        Layout.fillHeight: true
         currentIndex: bar.currentIndex
 
         interactive: false
@@ -133,5 +196,34 @@ ApplicationWindow {
             height: swipeView.height
             appFontFamily: window.appFontFamily
         }
+    }
+    }
+
+    component TitleBarButton: Rectangle {
+        property string text: ""
+        property bool isClose: false
+
+        width: 46
+        height: window.titleBarHeight
+        color: mouseArea.containsMouse
+            ? (isClose ? "#c42b1c" : "#383838")
+            : "transparent"
+
+        Text {
+            anchors.centerIn: parent
+            text: parent.text
+            color: mouseArea.containsMouse || parent.isClose ? "white" : "#cccccc"
+            font.pixelSize: 14
+            font.family: window.appFontFamily
+        }
+
+        MouseArea {
+            id: mouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            onClicked: parent.onClicked()
+        }
+
+        signal clicked()
     }
 }

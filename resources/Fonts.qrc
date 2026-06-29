@@ -13,5 +13,6 @@
         <file>star.png</file>
         <file>gear.png</file>
         <file>puzzle.png</file>
+        <file>app_icon.png</file>
     </qresource>
 </RCC>
