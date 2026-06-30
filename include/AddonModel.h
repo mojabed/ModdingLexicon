@@ -59,7 +59,9 @@ public:
         FavoritesRole,
         HasUpdateRole,
         FormattedDateRole,
-        IconSourceRole
+        IconSourceRole,
+        ApiVersionRole,
+        GameVersionRole
     };
     Q_ENUM(AddonRoles)
 

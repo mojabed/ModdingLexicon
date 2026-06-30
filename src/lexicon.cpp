@@ -35,6 +35,7 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     m_installedAddonsFilter->setSourceModel(m_addonModel);
     m_installedAddonsFilter->setShowInstalledOnly(true);
+    m_installedAddonsFilter->setExcludeBelowApiVersion(0);
 
     connect(&m_parsingWatcher, &QFutureWatcher<QList<ModInfo>>::finished, this, &Lexicon::onParsingFinished);
     connect(&m_installedCheckWatcher, &QFutureWatcher<void>::finished, this, &Lexicon::onInstalledAddonsCheckFinished);
@@ -45,6 +46,8 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
             parseMasterList();
         } else if (filePath == m_categoryListPath) {
             parseCategoryList();
+        } else if (filePath == m_gameConfigPath) {
+            parseGameConfig();
         }
     });
 
@@ -64,10 +67,18 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     QDir().mkpath(appData);
     m_masterListPath = appData + "/filelist.json";
     m_categoryListPath = appData + "/categorylist.json";
+    m_gameConfigPath = appData + "/gameconfig.json";
     m_installedFoldersPath = appData + "/installed_folders.json";
+
+    // Defaults in case gameconfig.json hasn't loaded yet
+    m_gameVersion = "12.0.0";
+    m_gameVersionName = "Season Zero Pt.2";
 
     loadInstalledFolders();
 
+    // Try loading cached gameconfig first, then update
+    parseGameConfig();
+    updateGameConfig();
     updateCategoryList();
     updateMasterList();
 
@@ -110,8 +121,148 @@ bool Lexicon::loadCachedMasterList() {
 
     checkInstalledAddons();
     m_addonModel->setMods(m_mods);
+    m_installedAddonsFilter->refreshFilter();
 
     return true;
+}
+
+void Lexicon::updateGameConfig() {
+    QUrl url("https://api.mmoui.com/v4/game/ESO/gameconfig.json");
+    m_httpClient->addDownload(url, m_gameConfigPath);
+}
+
+void Lexicon::parseGameConfig() {
+    QMap<int, QPair<QString, QString>> newMap;
+
+    // Try loading from cached file
+    QFile file(m_gameConfigPath);
+    if (file.open(QIODevice::ReadOnly)) {
+        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        file.close();
+        if (doc.isObject()) {
+            QJsonArray versions = doc.object()["gameVersions"].toArray();
+            for (const QJsonValue& val : versions) {
+                QJsonObject entry = val.toObject();
+                int api = entry["apiVersion"].toInt();
+                if (api == 0) continue;
+                QString ver = entry["version"].toString();
+                QString name = entry["name"].toString().replace('\n', ' ').trimmed();
+                newMap[api] = qMakePair(ver, name);
+            }
+        }
+    }
+
+    // Fallback to hardcoded map if file didn't yield usable data
+    if (newMap.isEmpty()) {
+        if (!m_gameVersionMap.isEmpty()) return; // Already have data, keep it
+        spdlog::warn("parseGameConfig: using hardcoded fallback map");
+        newMap[101050] = qMakePair(QString("12.0.0"), QString("Season Zero Pt.2"));
+        newMap[101049] = qMakePair(QString("11.3.0"), QString("Season Zero"));
+        newMap[101048] = qMakePair(QString("11.2.0"), QString("Seasons of the Worm Cult Pt2"));
+        newMap[101047] = qMakePair(QString("11.1.0"), QString("Feast of Shadows"));
+        newMap[101046] = qMakePair(QString("11.0.0"), QString("Seasons of the Worm Cult Pt1"));
+        newMap[101045] = qMakePair(QString("10.3.5"), QString("Fallen Banners"));
+        newMap[101044] = qMakePair(QString("10.2.0"), QString("Update 44"));
+        newMap[101043] = qMakePair(QString("10.1.0"), QString("Update 43"));
+        newMap[101042] = qMakePair(QString("10.0.0"), QString("Gold Road"));
+        newMap[101041] = qMakePair(QString("9.3.0"), QString("Scions of Ithelia"));
+        newMap[100035] = qMakePair(QString("2.7.0"), QString("Horns of the Reach"));
+        newMap[100034] = qMakePair(QString("2.6.0"), QString("Morrowind"));
+        newMap[100033] = qMakePair(QString("2.5.0"), QString("Homestead"));
+        newMap[100032] = qMakePair(QString("2.4.0"), QString("One Tamriel"));
+        newMap[100031] = qMakePair(QString("2.3.0"), QString("Shadows of the Hist"));
+        newMap[100030] = qMakePair(QString("2.2.0"), QString("Dark Brotherhood"));
+        newMap[100029] = qMakePair(QString("2.1.0"), QString("Thieves Guild"));
+        newMap[100028] = qMakePair(QString("1.7.0"), QString("Orsinium"));
+        newMap[100027] = qMakePair(QString("1.6.5"), QString("Update 6"));
+        newMap[100012] = qMakePair(QString("1.0.0"), QString("Live"));
+    }
+
+    if (newMap == m_gameVersionMap) return; // No change
+
+    m_gameVersionMap = newMap;
+    auto lastIt = m_gameVersionMap.end(); --lastIt;
+    m_gameVersion = lastIt.value().first;
+    m_gameVersionName = lastIt.value().second;
+
+    spdlog::info("Loaded {} game versions; latest: {} ({})",
+                 m_gameVersionMap.size(), m_gameVersionName.toStdString(), m_gameVersion.toStdString());
+
+    applyGameVersionsToMods();
+    if (!m_mods.isEmpty() && m_addonModel) {
+        m_addonModel->setMods(m_mods);
+        m_installedAddonsFilter->refreshFilter();
+    }
+    emit gameVersionChanged();
+}
+
+void Lexicon::applyGameVersionsToMods() {
+    const bool mapReady = !m_gameVersionMap.isEmpty();
+    spdlog::info("applyGameVersionsToMods: mapReady={} modCount={} mapSize={}",
+                 mapReady, m_mods.size(), m_gameVersionMap.size());
+
+    for (ModInfo& mod : m_mods) {
+        if (!mapReady) {
+            mod.gameVersionStr = m_gameVersionName + " (" + m_gameVersion + ")";
+            continue;
+        }
+
+        int apiVersion = mod.maxApiVersion;
+
+        if (apiVersion <= 0) {
+            mod.gameVersionStr = m_gameVersionName + " (" + m_gameVersion + ")";
+            continue;
+        }
+
+        auto it = m_gameVersionMap.lowerBound(apiVersion);
+        if (it == m_gameVersionMap.end()) {
+            // apiVersion is higher than any known version — use latest
+            --it;
+        } else if (it.key() > apiVersion) {
+            // apiVersion falls between entries — step back to next older version
+            if (it == m_gameVersionMap.begin()) {
+                // apiVersion is older than oldest known — use oldest
+            } else {
+                --it;
+            }
+        }
+
+        const auto& pair = it.value();
+        mod.gameVersionStr = pair.second + " (" + pair.first + ")";
+    }
+
+    spdlog::info("applyGameVersionsToMods done, sample:");
+    for (int i = 0; i < std::min(5, static_cast<int>(m_mods.size())); ++i) {
+        const auto& m = m_mods[i];
+        spdlog::info("  [{}] id={} maxApi={} gv='{}'", i, m.id.toStdString(), m.maxApiVersion, m.gameVersionStr.toStdString());
+    }
+}
+
+int Lexicon::getAddonApiVersion(const QString& modId) const
+{
+    for (const ModInfo& mod : m_mods) {
+        if (mod.id == modId)
+            return mod.maxApiVersion;
+    }
+    return 0;
+}
+
+QString Lexicon::getGameVersionForAddon(const QString& modId) const
+{
+    for (const ModInfo& mod : m_mods) {
+        if (mod.id == modId) {
+            spdlog::info("getGameVersionForAddon: id={} gameVersionStr='{}' fallback='{} ({})'",
+                         modId.toStdString(), mod.gameVersionStr.toStdString(),
+                         m_gameVersionName.toStdString(), m_gameVersion.toStdString());
+            if (!mod.gameVersionStr.isEmpty())
+                return mod.gameVersionStr;
+            break;
+        }
+    }
+    // Fallback: latest game version
+    if (!m_gameVersionName.isEmpty())
+        return m_gameVersionName + " (" + m_gameVersion + ")";
+    return QString();
 }
 
 void Lexicon::updateMasterList() {
@@ -195,7 +346,9 @@ void Lexicon::onParsingFinished() {
 
     checkInstalledAddons();
 
+    applyGameVersionsToMods();
     m_addonModel->setMods(m_mods);
+    m_installedAddonsFilter->refreshFilter();
     m_addonModel->setCategoryIcons(m_categoryIcons);
     spdlog::info("Loaded {} mods into model", m_mods.count());
 
@@ -278,6 +431,7 @@ void Lexicon::checkInstalledAddons() {
 
 void Lexicon::onInstalledAddonsCheckFinished() {
     m_addonModel->setMods(m_mods);
+    m_installedAddonsFilter->refreshFilter();
 }
 
 void Lexicon::applyCategoryMetadataToMods() {
@@ -429,7 +583,6 @@ void Lexicon::downloadAndExtractAddon(const QString& modId, const QString& title
 
 void Lexicon::installDependenciesFor(const QString& modId, const QString& addonsPath)
 {
-    // Find the mod in m_mods
     const ModInfo* mod = nullptr;
     for (const ModInfo& m : m_mods) {
         if (m.id == modId) {
@@ -475,7 +628,7 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
 
     emit addonInstallStatusChanged(modId, QStringLiteral("installing_dependencies"));
 
-    // Install sequentially using index-based recursion
+    // Install sequentially using index based recursion
     auto sharedIdx = std::make_shared<int>(0);
     auto sharedList = std::make_shared<QList<DepEntry>>(toInstall);
 

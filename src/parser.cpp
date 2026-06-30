@@ -2,6 +2,9 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
+#include <spdlog/spdlog.h>
+#include <algorithm>
+
 #include "parser.h"
 
 const QString Parser::m_downloadUrlPrefix = "https://cdn.esoui.com/downloads/file";
@@ -103,6 +106,12 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
                 dependency.addOnVersion = addonObj["addOnVersion"].toString();
                 dependency.apiVersion = addonObj["apiVersion"].toString();
                 dependency.library = addonObj.contains("library") ? addonObj["library"].toBool() : false;
+
+                // Track max apiVersion at the mod level
+                bool ok = false;
+                int api = dependency.apiVersion.toInt(&ok);
+                if (ok && api > mod.maxApiVersion)
+                    mod.maxApiVersion = api;
 
                 if (addonObj.contains("optionalDependencies") && addonObj["optionalDependencies"].isArray()) {
                     QJsonArray optDepArray = addonObj["optionalDependencies"].toArray();
@@ -252,6 +261,12 @@ QList<ModInfo> Parser::parseEsoMods(const QByteArray& jsonData) {
     for (int i = 1; i < modsJsonArray.size(); ++i) {
         mods.append(fromEsoJson(modsJsonArray[i].toObject()));
     }
+
+    // Log sample
+    for (int i = 0; i < std::min(5, static_cast<int>(mods.size())); ++i) {
+        spdlog::info("parseEsoMods [{}]: id={} maxApi={}", i, mods[i].id.toStdString(), mods[i].maxApiVersion);
+    }
+
     return mods;
 }
 

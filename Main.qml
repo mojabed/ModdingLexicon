@@ -56,6 +56,7 @@ ApplicationWindow {
             "addonIconSource": data.iconSource || "",
             "addonId": data.modId || "",
             "addonDownloadUrl": data.downloadUrl || "",
+            "addonGameVersion": data.gameVersion || "",
             "lexiconController": lexicon
         })
 

@@ -305,7 +305,8 @@ Item {
                             "iconSource": model.iconSource,
                             "fileInfoUri": model.fileInfoUri || "",
                             "modId": model.modId || "",
-                            "downloadUrl": model.downloadUrl || ""
+                            "downloadUrl": model.downloadUrl || "",
+                            "gameVersion": model.gameVersion || ""
                         })
                     }
                 }

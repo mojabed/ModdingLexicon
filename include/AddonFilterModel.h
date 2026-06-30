@@ -18,6 +18,8 @@ public:
     Q_INVOKABLE void setShowInstalledOnly(bool installed);
     Q_INVOKABLE void setCategoryFilter(const QString& categoryId);
     Q_INVOKABLE void setSearchText(const QString& text);
+    Q_INVOKABLE void setExcludeBelowApiVersion(int minApi);
+    Q_INVOKABLE void refreshFilter();
 
     QString categoryFilter() const;
     QString searchText() const;
@@ -37,6 +39,7 @@ private:
     bool m_showInstalledOnly = false;
     QString m_categoryFilter;
     QString m_searchText;
+    int m_excludeBelowApiVersion = 0;
     mutable QSet<int> m_installedRowsCache;
     mutable bool m_cacheValid = false;
     QTimer m_invalidationTimer;

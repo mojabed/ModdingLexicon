@@ -15,6 +15,7 @@ ApplicationWindow {
     property string addonFileInfoUri: ""
     property string addonId: ""
     property string addonDownloadUrl: ""
+    property string addonGameVersion: ""
     property int addonDownloads: 0
     property int addonDownloadsMonthly: 0
     property int addonFavorites: 0
@@ -27,6 +28,26 @@ ApplicationWindow {
 
     property string appFontFamily: "Segoe UI"
     property var lexiconController: null
+
+    property string gameVersionLabel: ""
+    property bool addonIsOutdated: false
+
+    Timer {
+        id: gameVersionPoller
+        interval: 200
+        running: true
+        repeat: true
+        onTriggered: {
+            if (!detailWindow.gameVersionLabel && detailWindow.lexiconController && detailWindow.addonId) {
+                var gv = detailWindow.lexiconController.getGameVersionForAddon(detailWindow.addonId)
+                if (gv) {
+                    detailWindow.gameVersionLabel = "game version: " + gv
+                    var api = detailWindow.lexiconController.getAddonApiVersion(detailWindow.addonId)
+                    detailWindow.addonIsOutdated = (api > 0 && api < 101042) || api === 0
+                }
+            }
+        }
+    }
 
     readonly property string descriptionHtml: {
         if (lexiconController && addonFileInfoUri)
@@ -175,6 +196,29 @@ ApplicationWindow {
                 label: detailWindow.addonIsInstalled ? "Installed" : "Not Installed"
                 badgeColor: detailWindow.addonIsInstalled ? "#4caf50" : "#888"
             }
+        }
+
+        // Game version
+        Text {
+            visible: detailWindow.gameVersionLabel !== ""
+            text: detailWindow.gameVersionLabel
+            color: "#8eb5d6"
+            font.family: detailWindow.appFontFamily
+            font.pixelSize: 13
+        }
+
+        // Outdated warning
+        Text {
+            visible: detailWindow.addonIsOutdated
+            text: {
+                var api = detailWindow.lexiconController.getAddonApiVersion(detailWindow.addonId)
+                if (api === 0)
+                    return "No API version data \u2014 this addon may be outdated"
+                return "Outdated addon (API " + api + ") \u2014 may not function correctly"
+            }
+            color: "#e8a838"
+            font.family: detailWindow.appFontFamily
+            font.pixelSize: 13
         }
 
         // Divider

@@ -22,6 +22,8 @@ class Lexicon : public QObject {
     Q_PROPERTY(AddonFilterModel* installedAddonsFilter READ installedAddonsFilter CONSTANT)
     Q_PROPERTY(CategoryModel* categoryModel READ categoryModel CONSTANT)
     Q_PROPERTY(QString currentDescription READ currentDescription NOTIFY currentDescriptionChanged)
+    Q_PROPERTY(QString gameVersion READ gameVersion NOTIFY gameVersionChanged)
+    Q_PROPERTY(QString gameVersionName READ gameVersionName NOTIFY gameVersionChanged)
 
 public:
     explicit Lexicon(QObject* parent = nullptr);
@@ -36,7 +38,11 @@ public:
     Q_INVOKABLE void installAddon(const QString& modId, const QString& title, const QString& downloadUrl);
     Q_INVOKABLE void uninstallAddon(const QString& modId, const QString& title);
     Q_INVOKABLE void refreshInstalledStatus();
+    Q_INVOKABLE QString getGameVersionForAddon(const QString& modId) const;
+    Q_INVOKABLE int getAddonApiVersion(const QString& modId) const;
     QString currentDescription() const { return m_currentDescription; }
+    QString gameVersion() const { return m_gameVersion; }
+    QString gameVersionName() const { return m_gameVersionName; }
 
 signals:
     void masterListReady(const QString& filePath);
@@ -50,6 +56,7 @@ signals:
     void addonUninstallFinished(const QString& modId);
     void addonDependencyInstallStarted(const QString& modId, const QString& depTitle);
     void addonInstallStatusChanged(const QString& modId, const QString& status);
+    void gameVersionChanged();
 
 private slots:
     void onParsingFinished();
@@ -66,8 +73,11 @@ private:
     void applyCategoryMetadataToMods();
     void updateMasterList();
     void updateCategoryList();
+    void updateGameConfig();
     void parseMasterList();
     void parseCategoryList();
+    void parseGameConfig();
+    void applyGameVersionsToMods();
     void checkInstalledAddons();
     bool loadCachedMasterList();
 
@@ -81,6 +91,7 @@ private:
 
     QString m_masterListPath;
     QString m_categoryListPath;
+    QString m_gameConfigPath;
     QString m_installedFoldersPath;
     QList<ModInfo> m_mods;
     QMap<QString, QString> m_categoryNames;
@@ -93,4 +104,7 @@ private:
 
     DescriptionFetcher* m_descriptionFetcher = nullptr;
     QString m_currentDescription;
+    QString m_gameVersion;
+    QString m_gameVersionName;
+    QMap<int, QPair<QString, QString>> m_gameVersionMap; // apiVersion -> (version, name)
 };

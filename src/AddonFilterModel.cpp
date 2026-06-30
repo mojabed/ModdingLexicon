@@ -47,6 +47,17 @@ void AddonFilterModel::setSearchText(const QString& text) {
     }
 }
 
+void AddonFilterModel::setExcludeBelowApiVersion(int minApi) {
+    if (m_excludeBelowApiVersion != minApi) {
+        m_excludeBelowApiVersion = minApi;
+        invalidateFilter();
+    }
+}
+
+void AddonFilterModel::refreshFilter() {
+    invalidateFilter();
+}
+
 void AddonFilterModel::invalidateCache() {
     m_cacheValid = false;
 }
