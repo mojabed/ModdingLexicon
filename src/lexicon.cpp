@@ -78,6 +78,7 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     // Try loading cached gameconfig first, then update
     parseGameConfig();
+    loadCachedMasterList();
     updateGameConfig();
     updateCategoryList();
     updateMasterList();
@@ -236,6 +237,34 @@ void Lexicon::applyGameVersionsToMods() {
         const auto& m = m_mods[i];
         spdlog::info("  [{}] id={} maxApi={} gv='{}'", i, m.id.toStdString(), m.maxApiVersion, m.gameVersionStr.toStdString());
     }
+}
+
+void Lexicon::refreshCategoryCounts()
+{
+    if (!m_categoryModel || !m_installedAddonsFilter || !m_addonModel)
+        return;
+
+    const int minApi = m_installedAddonsFilter->excludeBelowApiVersion();
+
+    QMap<QString, int> counts;
+    const int totalRows = m_addonModel->rowCount();
+    for (int i = 0; i < totalRows; ++i) {
+        QModelIndex idx = m_addonModel->index(i, 0);
+
+        // Apply apiVersion filter
+        if (minApi > 0) {
+            int apiVersion = m_addonModel->data(idx, AddonModel::ApiVersionRole).toInt();
+            if (apiVersion > 0 && apiVersion < minApi) {
+                bool isInstalled = m_addonModel->data(idx, AddonModel::IsInstalledRole).toBool();
+                if (!isInstalled)
+                    continue;
+            }
+        }
+
+        QString catId = m_addonModel->data(idx, AddonModel::CategoryIdRole).toString();
+        counts[catId]++;
+    }
+    m_categoryModel->updateCounts(counts);
 }
 
 int Lexicon::getAddonApiVersion(const QString& modId) const

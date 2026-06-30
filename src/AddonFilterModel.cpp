@@ -54,6 +54,10 @@ void AddonFilterModel::setExcludeBelowApiVersion(int minApi) {
     }
 }
 
+int AddonFilterModel::excludeBelowApiVersion() const {
+    return m_excludeBelowApiVersion;
+}
+
 void AddonFilterModel::refreshFilter() {
     invalidateFilter();
 }
@@ -103,6 +107,15 @@ bool AddonFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& source
         if (!title.contains(m_searchText, Qt::CaseInsensitive) &&
             !author.contains(m_searchText, Qt::CaseInsensitive)) {
             return false;
+        }
+    }
+
+    if (m_excludeBelowApiVersion > 0) {
+        const int apiVersion = sourceModel()->data(sourceIndex, AddonModel::ApiVersionRole).toInt();
+        if (apiVersion > 0 && apiVersion < m_excludeBelowApiVersion) {
+            const bool isInstalled = sourceModel()->data(sourceIndex, AddonModel::IsInstalledRole).toBool();
+            if (!isInstalled)
+                return false;
         }
     }
 

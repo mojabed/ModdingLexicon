@@ -19,6 +19,7 @@ public:
     Q_INVOKABLE void setCategoryFilter(const QString& categoryId);
     Q_INVOKABLE void setSearchText(const QString& text);
     Q_INVOKABLE void setExcludeBelowApiVersion(int minApi);
+    int excludeBelowApiVersion() const;
     Q_INVOKABLE void refreshFilter();
 
     QString categoryFilter() const;

@@ -60,3 +60,12 @@ void CategoryModel::clear() {
     endResetModel();
     emit countChanged();
 }
+
+void CategoryModel::updateCounts(const QMap<QString, int>& counts) {
+    for (auto& cat : m_categories) {
+        cat.addonCount = counts.value(cat.categoryId, 0);
+    }
+    if (!m_categories.isEmpty()) {
+        emit dataChanged(index(0), index(m_categories.size() - 1), {AddonCountRole});
+    }
+}

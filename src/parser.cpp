@@ -108,9 +108,21 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
                 dependency.library = addonObj.contains("library") ? addonObj["library"].toBool() : false;
 
                 // Track max apiVersion at the mod level
-                bool ok = false;
-                int api = dependency.apiVersion.toInt(&ok);
-                if (ok && api > mod.maxApiVersion)
+                int api = 0;
+                QString apiStr = addonObj["apiVersion"].toString();
+                if (!apiStr.isEmpty()) {
+                    // Handles "101046 101047" (space-separated) or single value
+                    const QStringList parts = apiStr.split(' ', Qt::SkipEmptyParts);
+                    for (const QString& part : parts) {
+                        bool ok = false;
+                        int v = part.toInt(&ok);
+                        if (ok && v > api)
+                            api = v;
+                    }
+                } else if (addonObj["apiVersion"].isDouble()) {
+                    api = addonObj["apiVersion"].toInt();
+                }
+                if (api > mod.maxApiVersion)
                     mod.maxApiVersion = api;
 
                 if (addonObj.contains("optionalDependencies") && addonObj["optionalDependencies"].isArray()) {
@@ -141,6 +153,15 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
                 mod.lastUpdated = QDateTime::fromSecsSinceEpoch(timestamp);
             }
         }
+    }
+
+    if (mod.maxApiVersion > 0) {
+        spdlog::info("fromEsoJson id={} title='{}' maxApi={} deps={}",
+                     mod.id.toStdString(), mod.title.toStdString(),
+                     mod.maxApiVersion, mod.addons.size());
+    } else if (!mod.addons.isEmpty()) {
+        spdlog::warn("fromEsoJson id={} title='{}' HAS addons({}) but maxApi=0",
+                     mod.id.toStdString(), mod.title.toStdString(), mod.addons.size());
     }
 
     return mod;
@@ -186,6 +207,23 @@ ModInfo Parser::fromCacheJson(const QJsonObject& json) {
             dependency.addOnVersion = addonObj["addOnVersion"].toString();
             dependency.apiVersion = addonObj["apiVersion"].toString();
             dependency.library = addonObj["library"].toBool();
+
+            // Track max apiVersion
+            int api = 0;
+            QString apiStr = addonObj["apiVersion"].toString();
+            if (!apiStr.isEmpty()) {
+                const QStringList parts = apiStr.split(' ', Qt::SkipEmptyParts);
+                for (const QString& part : parts) {
+                    bool ok = false;
+                    int v = part.toInt(&ok);
+                    if (ok && v > api)
+                        api = v;
+                }
+            } else if (addonObj["apiVersion"].isDouble()) {
+                api = addonObj["apiVersion"].toInt();
+            }
+            if (api > mod.maxApiVersion)
+                mod.maxApiVersion = api;
 
             if (addonObj.contains("optionalDependencies") && addonObj["optionalDependencies"].isArray()) {
                 QJsonArray optDepArray = addonObj["optionalDependencies"].toArray();

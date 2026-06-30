@@ -38,6 +38,7 @@ public:
 
     Q_INVOKABLE void setCategories(const QList<CategoryInfo>& categories);
     Q_INVOKABLE void clear();
+    Q_INVOKABLE void updateCounts(const QMap<QString, int>& counts);
 
 signals:
     void countChanged();

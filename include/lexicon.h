@@ -40,6 +40,7 @@ public:
     Q_INVOKABLE void refreshInstalledStatus();
     Q_INVOKABLE QString getGameVersionForAddon(const QString& modId) const;
     Q_INVOKABLE int getAddonApiVersion(const QString& modId) const;
+    Q_INVOKABLE void refreshCategoryCounts();
     QString currentDescription() const { return m_currentDescription; }
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }

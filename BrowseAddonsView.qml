@@ -134,6 +134,33 @@ Item {
                 Layout.fillWidth: true
             }
 
+            // Filter outdated toggle
+            RowLayout {
+                spacing: 6
+                Layout.alignment: Qt.AlignVCenter
+
+                Text {
+                    text: "Hide outdated"
+                    color: "#aaaaaa"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 13
+                }
+
+                Switch {
+                    id: outdatedToggle
+                    checked: false
+                    Material.accent: Material.DeepPurple
+                    onCheckedChanged: {
+                        if (root.lexiconController) {
+                            root.lexiconController.installedAddonsFilter.setExcludeBelowApiVersion(
+                                checked ? 101042 : 0
+                            )
+                            root.lexiconController.refreshCategoryCounts()
+                        }
+                    }
+                }
+            }
+
             Text {
                 visible: {
                     if (!root.appWindow) return false
