@@ -175,8 +175,6 @@ void Lexicon::parseGameConfig() {
 
 void Lexicon::applyGameVersionsToMods() {
     const bool mapReady = !m_gameVersionMap.isEmpty();
-    spdlog::info("applyGameVersionsToMods: mapReady={} modCount={} mapSize={}",
-                 mapReady, m_mods.size(), m_gameVersionMap.size());
 
     for (ModInfo& mod : m_mods) {
         if (!mapReady) {
@@ -206,12 +204,6 @@ void Lexicon::applyGameVersionsToMods() {
 
         const auto& pair = it.value();
         mod.gameVersionStr = pair.second + " (" + pair.first + ")";
-    }
-
-    spdlog::info("applyGameVersionsToMods done, sample:");
-    for (int i = 0; i < std::min(5, static_cast<int>(m_mods.size())); ++i) {
-        const auto& m = m_mods[i];
-        spdlog::info("  [{}] id={} maxApi={} gv='{}'", i, m.id.toStdString(), m.maxApiVersion, m.gameVersionStr.toStdString());
     }
 }
 
@@ -256,9 +248,6 @@ QString Lexicon::getGameVersionForAddon(const QString& modId) const
 {
     for (const ModInfo& mod : m_mods) {
         if (mod.id == modId) {
-            spdlog::info("getGameVersionForAddon: id={} gameVersionStr='{}' fallback='{} ({})'",
-                         modId.toStdString(), mod.gameVersionStr.toStdString(),
-                         m_gameVersionName.toStdString(), m_gameVersion.toStdString());
             if (!mod.gameVersionStr.isEmpty())
                 return mod.gameVersionStr;
             break;
@@ -356,7 +345,6 @@ void Lexicon::onParsingFinished() {
     m_addonModel->setMods(m_mods);
     m_installedAddonsFilter->refreshFilter();
     m_addonModel->setCategoryIcons(m_categoryIcons);
-    spdlog::info("Loaded {} mods into model", m_mods.count());
 
     populateCategories();
 }
@@ -779,8 +767,6 @@ void Lexicon::loadInstalledFolders()
         if (!folders.isEmpty())
             m_installedFolders[it.key()] = folders;
     }
-
-    spdlog::info("Loaded {} installed folder entries", m_installedFolders.size());
 }
 
 void Lexicon::saveInstalledFolders()
@@ -818,8 +804,6 @@ void Lexicon::trackInstalledFolders(const QString& modId, const QStringList& bef
 
     m_installedFolders[modId] = newFolders;
     saveInstalledFolders();
-    spdlog::info("Tracked {} folders for mod {}: {}", newFolders.size(), modId.toStdString(),
-                 newFolders.join(", ").toStdString());
 }
 
 void Lexicon::fetchAddonDescription(const QString& fileInfoUrl)

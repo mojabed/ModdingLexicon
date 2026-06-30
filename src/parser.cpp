@@ -292,11 +292,6 @@ QList<ModInfo> Parser::parseEsoMods(const QByteArray& jsonData) {
         mods.append(fromEsoJson(modsJsonArray[i].toObject()));
     }
 
-    // Log sample
-    for (int i = 0; i < std::min(5, static_cast<int>(mods.size())); ++i) {
-        spdlog::info("parseEsoMods [{}]: id={} maxApi={}", i, mods[i].id.toStdString(), mods[i].maxApiVersion);
-    }
-
     return mods;
 }
 
