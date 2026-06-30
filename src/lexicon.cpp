@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QSet>
 #include <QTimer>
+#include <QRegularExpression>
 #include <chrono>
 #include <QtConcurrent>
 #include <algorithm>
@@ -586,13 +587,18 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
     }
     if (!mod) return;
 
-    // Collect unique dependency titles
+    // Collect unique dependency titles (strip version constraints like >=43, >30, etc.)
     QSet<QString> depTitles;
+    static const QRegularExpression verSuffix(QStringLiteral("[><=]+[\\d.]+$"));
     for (const Dependencies& dep : mod->addons) {
-        for (const QString& title : dep.requiredDependencies)
-            depTitles.insert(title);
-        for (const QString& title : dep.optionalDependencies)
-            depTitles.insert(title);
+        for (const QString& rawTitle : dep.requiredDependencies) {
+            QString clean = QString(rawTitle).remove(verSuffix).trimmed();
+            depTitles.insert(clean);
+        }
+        for (const QString& rawTitle : dep.optionalDependencies) {
+            QString clean = QString(rawTitle).remove(verSuffix).trimmed();
+            depTitles.insert(clean);
+        }
     }
 
     if (depTitles.isEmpty()) {
@@ -604,13 +610,55 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
     // Resolve titles to ModInfo entries
     struct DepEntry { QString id; QString title; QString downloadUrl; };
     QList<DepEntry> toInstall;
+
     for (const QString& depTitle : depTitles) {
         const QString lowerTitle = depTitle.toLower();
+        const QString lowerTitleNoSpaces = QString(lowerTitle).remove(' ');
+        bool found = false;
+
+        // Pass 1: match by title
         for (const ModInfo& m : m_mods) {
-            if (m.title.toLower() == lowerTitle && !m.isInstalled && m.id != modId) {
+            const QString mLower = m.title.toLower();
+            QString mLowerNoSpaces = mLower;
+            mLowerNoSpaces.remove(' ');
+            if ((mLower == lowerTitle || mLowerNoSpaces == lowerTitleNoSpaces)
+                && !m.isInstalled && m.id != modId) {
                 toInstall.append({ m.id, m.title, m.downloadUrl.toString() });
+                found = true;
                 break;
             }
+        }
+
+        // Pass 2: match by addons[0].path (folder name in dependency's JSON)
+        if (!found) {
+            for (const ModInfo& m : m_mods) {
+                if (m.isInstalled || m.id == modId || m.addons.isEmpty())
+                    continue;
+                const QString mPath = m.addons[0].path.toLower();
+                if (mPath == lowerTitle || mPath == lowerTitleNoSpaces) {
+                    toInstall.append({ m.id, m.title, m.downloadUrl.toString() });
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        // Pass 3: substring match against title
+        if (!found && lowerTitleNoSpaces.length() >= 4) {
+            for (const ModInfo& m : m_mods) {
+                QString mLowerNoSpaces = m.title.toLower();
+                mLowerNoSpaces.remove(' ');
+                if (mLowerNoSpaces.contains(lowerTitleNoSpaces)
+                    && !m.isInstalled && m.id != modId) {
+                    toInstall.append({ m.id, m.title, m.downloadUrl.toString() });
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found) {
+            spdlog::warn("installDependenciesFor: could not find mod for dependency '{}'", depTitle.toStdString());
         }
     }
 
@@ -622,12 +670,12 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
 
     emit addonInstallStatusChanged(modId, QStringLiteral("installing_dependencies"));
 
-    // Install sequentially using index based recursion
+    // Install sequentially using index-based recursion
     auto sharedIdx = std::make_shared<int>(0);
     auto sharedList = std::make_shared<QList<DepEntry>>(toInstall);
+    auto installNext = std::make_shared<std::function<void()>>();
 
-    std::function<void()> installNext;
-    installNext = [this, modId, sharedIdx, sharedList, &installNext]() {
+    *installNext = [this, modId, sharedIdx, sharedList, installNext]() {
         if (*sharedIdx >= sharedList->size()) {
             refreshInstalledStatus();
             emit addonInstallFinished(modId);
@@ -638,17 +686,16 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
         emit addonDependencyInstallStarted(modId, dep.title);
 
         downloadAndExtractAddon(dep.id, dep.title, dep.downloadUrl,
-            [this, modId, sharedIdx, &installNext](bool success, const QString& error) {
+            [this, modId, sharedIdx, installNext](bool success, const QString& error) {
                 if (!success) {
                     spdlog::warn("installAddon: dependency failed: {}", error.toStdString());
-                    // Continue with next dependency even if one fails
                 }
                 (*sharedIdx)++;
-                installNext();
+                (*installNext)();
             });
     };
 
-    installNext();
+    (*installNext)();
 }
 
 void Lexicon::installAddon(const QString& modId, const QString& title, const QString& downloadUrl)
