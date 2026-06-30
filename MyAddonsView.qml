@@ -210,9 +210,9 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            if (root.lexiconController) {
-                                root.lexiconController.uninstallAddon(model.modId, model.title)
-                            }
+                            uninstallTargetId = model.modId
+                            uninstallTargetTitle = model.title
+                            uninstallConfirmDialog.open()
                         }
                     }
                 }
@@ -228,6 +228,39 @@ Item {
                 implicitHeight: 24
                 radius: width / 2
                 color: Material.color(Material.Grey, Material.Shade700)
+            }
+        }
+    }
+
+    property string uninstallTargetId: ""
+    property string uninstallTargetTitle: ""
+
+    Dialog {
+        id: uninstallConfirmDialog
+        title: "Uninstall Addon"
+        anchors.centerIn: parent
+        width: 340
+        modal: true
+        standardButtons: Dialog.Yes | Dialog.No
+        Material.theme: Material.Dark
+
+        background: Rectangle {
+            color: "#2a2a2a"
+            radius: 8
+            border.color: "#555"
+        }
+
+        contentItem: Text {
+            text: "Are you sure you want to uninstall \"" + root.uninstallTargetTitle + "\"?"
+            color: "#cccccc"
+            font.family: root.appFontFamily
+            font.pixelSize: 14
+            wrapMode: Text.WordWrap
+        }
+
+        onAccepted: {
+            if (root.lexiconController) {
+                root.lexiconController.uninstallAddon(root.uninstallTargetId, root.uninstallTargetTitle)
             }
         }
     }

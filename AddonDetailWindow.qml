@@ -166,10 +166,7 @@ ApplicationWindow {
                     if (!detailWindow.lexiconController)
                         return
                     if (installButton.isUninstall) {
-                        detailWindow.lexiconController.uninstallAddon(
-                            detailWindow.addonId,
-                            detailWindow.addonTitle
-                        )
+                        uninstallConfirmDialog.open()
                     } else {
                         detailWindow.addonIsInstalling = true
                         detailWindow.addonInstallPercent = 0
@@ -380,6 +377,39 @@ ApplicationWindow {
             if (modId === detailWindow.addonId) {
                 detailWindow.addonDependencyTitle = depTitle
                 detailWindow.addonInstallPercent = 0
+            }
+        }
+    }
+
+    Dialog {
+        id: uninstallConfirmDialog
+        title: "Uninstall Addon"
+        anchors.centerIn: parent
+        width: 340
+        modal: true
+        standardButtons: Dialog.Yes | Dialog.No
+        Material.theme: Material.Dark
+
+        background: Rectangle {
+            color: "#2a2a2a"
+            radius: 8
+            border.color: "#555"
+        }
+
+        contentItem: Text {
+            text: "Are you sure you want to uninstall \"" + detailWindow.addonTitle + "\"?"
+            color: "#cccccc"
+            font.family: detailWindow.appFontFamily
+            font.pixelSize: 14
+            wrapMode: Text.WordWrap
+        }
+
+        onAccepted: {
+            if (detailWindow.lexiconController) {
+                detailWindow.lexiconController.uninstallAddon(
+                    detailWindow.addonId,
+                    detailWindow.addonTitle
+                )
             }
         }
     }
