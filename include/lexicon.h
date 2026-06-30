@@ -80,7 +80,6 @@ private:
     void parseGameConfig();
     void applyGameVersionsToMods();
     void checkInstalledAddons();
-    bool loadCachedMasterList();
 
     void loadInstalledFolders();
     void saveInstalledFolders();

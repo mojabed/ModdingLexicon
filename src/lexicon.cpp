@@ -103,29 +103,6 @@ CategoryModel* Lexicon::categoryModel() const {
     return m_categoryModel;
 }
 
-bool Lexicon::loadCachedMasterList() {
-    spdlog::info("Loading cached master list from: {}", m_masterListPath.toStdString());
-    QFile file(m_masterListPath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        spdlog::error("Failed to open cached master list file: {}", m_masterListPath.toStdString());
-        return false;
-    }
-    QByteArray jsonData = file.readAll();
-    file.close();
-
-    m_mods = Parser::parseEsoMods(jsonData);
-    if (m_mods.isEmpty()) {
-        spdlog::error("Failed to parse cached master list or list is empty");
-        return false;
-    }
-
-    checkInstalledAddons();
-    m_addonModel->setMods(m_mods);
-    m_installedAddonsFilter->refreshFilter();
-
-    return true;
-}
-
 void Lexicon::updateGameConfig() {
     QUrl url("https://api.mmoui.com/v4/game/ESO/gameconfig.json");
     m_httpClient->addDownload(url, m_gameConfigPath);
@@ -294,6 +271,7 @@ QString Lexicon::getGameVersionForAddon(const QString& modId) const
 }
 
 void Lexicon::updateMasterList() {
+    QFile::remove(m_masterListPath);
     QUrl url("https://api.mmoui.com/v4/game/ESO/filelist.json");
     spdlog::info("Starting master list download to: {}", m_masterListPath.toStdString());
     m_httpClient->addDownload(url, m_masterListPath);
