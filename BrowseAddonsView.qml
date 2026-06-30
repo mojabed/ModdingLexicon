@@ -72,7 +72,6 @@ Item {
                 font.bold: true
                 hoverEnabled: true
                 onClicked: {
-                    console.log("Back button clicked")
                     root.goBack()
                 }
 
@@ -132,6 +131,133 @@ Item {
 
             Item {
                 Layout.fillWidth: true
+            }
+
+            // Sort button
+            Item {
+                width: 36
+                height: 36
+                Layout.alignment: Qt.AlignVCenter
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 6
+                    color: sortMouse.containsMouse ? "#3a3a3a" : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\u2B0D"
+                        color: "#cccccc"
+                        font.family: root.appFontFamily
+                        font.pixelSize: 20
+                    }
+
+                    MouseArea {
+                        id: sortMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: sortPopup.open()
+                    }
+                }
+
+                Popup {
+                    id: sortPopup
+                    y: parent.height
+                    x: -120
+                    width: 180
+                    padding: 8
+                    modal: false
+                    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+                    background: Rectangle {
+                        color: "#2a2a2a"
+                        radius: 8
+                        border.color: "#555"
+                    }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 4
+
+                        Text {
+                            text: "Sort by"
+                            color: "#aaaaaa"
+                            font.family: root.appFontFamily
+                            font.pixelSize: 12
+                            font.bold: true
+                            Layout.leftMargin: 6
+                        }
+
+                        Repeater {
+                            model: [
+                                { mode: "downloads", label: "Downloads" },
+                                { mode: "monthly", label: "Monthly Downloads" },
+                                { mode: "favorites", label: "Favorites" },
+                                { mode: "api", label: "API Version" }
+                            ]
+
+                            delegate: Item {
+                                width: 164
+                                height: 32
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 4
+                                    color: delegateMouse.containsMouse ? "#3a3a3a" : "transparent"
+                                }
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+
+                                    Text {
+                                        text: modelData.label
+                                        color: {
+                                            var f = root.lexiconController ? root.lexiconController.installedAddonsFilter : null
+                                            return f && f.sortMode === modelData.mode ? "#b39ddb" : "#cccccc"
+                                        }
+                                        font.family: root.appFontFamily
+                                        font.pixelSize: 14
+                                        Layout.fillWidth: true
+                                    }
+
+                                    Text {
+                                        text: {
+                                            var f = root.lexiconController ? root.lexiconController.installedAddonsFilter : null
+                                            return f && f.sortMode === modelData.mode
+                                                ? (f.sortOrder === Qt.DescendingOrder ? "\u2193" : "\u2191")
+                                                : ""
+                                        }
+                                        color: "#b39ddb"
+                                        font.family: root.appFontFamily
+                                        font.pixelSize: 16
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: delegateMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (root.lexiconController) {
+                                            var filter = root.lexiconController.installedAddonsFilter
+                                            if (filter.sortMode === modelData.mode) {
+                                                filter.setSortOrder(
+                                                    filter.sortOrder === Qt.DescendingOrder
+                                                        ? Qt.AscendingOrder : Qt.DescendingOrder
+                                                )
+                                            } else {
+                                                filter.setSortMode(modelData.mode)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Filter outdated toggle
@@ -259,7 +385,6 @@ Item {
                     onPressed: parent.color = "#311b44"
                     onReleased: parent.color = containsMouse ? "#353535" : "#2a2a2a"
                     onClicked: {
-                        console.log("Category clicked:", model.categoryId, "Count:", model.addonCount)
                         root.appWindow.selectedCategoryId = model.categoryId
                         root.appWindow.selectedCategoryName = model.categoryName
                         root.lexiconController.installedAddonsFilter.setCategoryFilter(model.categoryId)
@@ -300,8 +425,6 @@ Item {
             reuseItems: true
             cacheBuffer: 500
             model: root.lexiconController ? root.lexiconController.installedAddonsFilter : null
-
-            onCountChanged: console.log("ListView count changed to:", count)
 
             delegate: Rectangle {
                 width: categoryAddonsList.width - 20

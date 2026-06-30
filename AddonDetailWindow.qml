@@ -192,6 +192,8 @@ ApplicationWindow {
             InfoBadge { label: "v" + (detailWindow.addonVersion || "-") }
             InfoBadge { label: detailWindow.addonCategory || "-" }
             InfoBadge { label: formatNumber(detailWindow.addonDownloads) + " DL" }
+            InfoBadge { label: formatNumber(detailWindow.addonDownloadsMonthly) + " DL/mo" }
+            InfoBadge { label: detailWindow.addonFavorites + " \u2605" }
             InfoBadge {
                 label: detailWindow.addonIsInstalled ? "Installed" : "Not Installed"
                 badgeColor: detailWindow.addonIsInstalled ? "#4caf50" : "#888"

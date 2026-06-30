@@ -163,7 +163,6 @@ ApplicationWindow {
         interactive: false
 
         onCurrentIndexChanged: {
-            console.log("Tab switched to index:", currentIndex)
             if (currentIndex !== 1) {
                 window.viewingCategoryAddons = false
                 lexicon.installedAddonsFilter.setCategoryFilter("")

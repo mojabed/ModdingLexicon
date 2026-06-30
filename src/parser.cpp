@@ -65,6 +65,7 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
     mod.fileInfoUri = json["fileInfoUri"].toString();
     mod.downloads = json["downloads"].toInt();
     mod.downloadsMonthly = json["downloadsMonthly"].toInt();
+    mod.favorites = json["favorites"].toInt();
     mod.checksum = json["checksum"].toString();
     mod.library = json["library"].toBool(false);
     mod.donationUrl = json.contains("donationUrl") ? QUrl(json["donationUrl"].toString()) : QUrl();
@@ -153,15 +154,6 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
                 mod.lastUpdated = QDateTime::fromSecsSinceEpoch(timestamp);
             }
         }
-    }
-
-    if (mod.maxApiVersion > 0) {
-        spdlog::info("fromEsoJson id={} title='{}' maxApi={} deps={}",
-                     mod.id.toStdString(), mod.title.toStdString(),
-                     mod.maxApiVersion, mod.addons.size());
-    } else if (!mod.addons.isEmpty()) {
-        spdlog::warn("fromEsoJson id={} title='{}' HAS addons({}) but maxApi=0",
-                     mod.id.toStdString(), mod.title.toStdString(), mod.addons.size());
     }
 
     return mod;

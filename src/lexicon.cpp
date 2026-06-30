@@ -78,7 +78,6 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     // Try loading cached gameconfig first, then update
     parseGameConfig();
-    loadCachedMasterList();
     updateGameConfig();
     updateCategoryList();
     updateMasterList();
