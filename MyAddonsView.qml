@@ -18,7 +18,10 @@ Item {
 
     onVisibleChanged: {
         if (visible && root.lexiconController) {
-            root.lexiconController.installedAddonsFilter.setShowInstalledOnly(true)
+            var filter = root.lexiconController.installedAddonsFilter
+            filter.setShowInstalledOnly(true)
+            filter.setSortMode("title")
+            filter.setSortOrder(Qt.AscendingOrder)
         }
     }
 

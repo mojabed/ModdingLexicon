@@ -365,40 +365,69 @@ void Lexicon::checkInstalledAddons() {
             return;
         }
 
-        QStringList installedDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        QStringList installedDirs;
+        for (const QString& dir : addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            // Skip non-addon folders
+            if (dir.startsWith('.') || dir.startsWith('_') || dir.endsWith(".zip"))
+                continue;
+            installedDirs.append(dir);
+        }
 
         spdlog::info("Found {} installed addon directories", installedDirs.size());
 
         QSet<QString> installedDirsSet;
         installedDirsSet.reserve(installedDirs.size());
         for (const QString& dir : installedDirs) {
-            installedDirsSet.insert(dir.toLower());
+            QString d = dir.toLower();
+            d.remove('\'');
+            installedDirsSet.insert(d);
+        }
+
+        QMap<QString, int> pathCounts;
+        for (const ModInfo& mod : m_mods) {
+            if (!mod.addons.isEmpty()) {
+                QString pathKey = mod.addons[0].path.toLower();
+                pathKey.remove('\'');
+                pathCounts[pathKey]++;
+            }
         }
 
         int matchedCount = 0;
+        int titleMatch = 0;
+        int spaceMatch = 0;
+        int trackedMatch = 0;
+        int pathMatch = 0;
         for (ModInfo& mod : m_mods) {
             mod.isInstalled = false;
             mod.installPath.clear();
 
             const QString lowerTitle = mod.title.toLower();
+            QString normalizedTitle = lowerTitle;
+            normalizedTitle.remove(' ');
+            normalizedTitle.remove('\'');
+
+            // Also strip version numbers for matching
+            QString strippedTitle = normalizedTitle;
+            strippedTitle.remove(QRegularExpression("[\\d.]+$"));
 
             if (installedDirsSet.contains(lowerTitle)) {
                 mod.isInstalled = true;
                 mod.installPath = addonsDir.filePath(mod.title);
                 matchedCount++;
+                titleMatch++;
                 continue;
             }
 
-            QString normalizedTitle = lowerTitle;
-            normalizedTitle.remove(' ');
             if (normalizedTitle != lowerTitle) {
                 for (const QString& dir : installedDirs) {
                     QString normalizedDir = dir.toLower();
                     normalizedDir.remove(' ');
-                    if (normalizedTitle == normalizedDir) {
+                    normalizedDir.remove('\'');
+                    if (normalizedTitle == normalizedDir || strippedTitle == normalizedDir) {
                         mod.isInstalled = true;
                         mod.installPath = addonsDir.filePath(dir);
                         matchedCount++;
+                        spaceMatch++;
                         break;
                     }
                 }
@@ -411,13 +440,135 @@ void Lexicon::checkInstalledAddons() {
                         mod.isInstalled = true;
                         mod.installPath = addonsDir.filePath(folder);
                         matchedCount++;
+                        trackedMatch++;
                         break;
                     }
                 }
             }
-        }
 
-        spdlog::info("Installed check: {} addons matched", matchedCount);
+                // Match by addons[0].path
+                if (!mod.isInstalled && !mod.addons.isEmpty()) {
+                    QString pathLower = mod.addons[0].path.toLower();
+                    pathLower.remove('\'');
+                    if (installedDirsSet.contains(pathLower)) {
+                        int claimants = pathCounts.value(pathLower);
+                        if (claimants == 1) {
+                            mod.isInstalled = true;
+                            mod.installPath = addonsDir.filePath(mod.addons[0].path);
+                            matchedCount++;
+                            pathMatch++;
+                        }
+                    }
+                }
+            }
+
+            for (const QString& dir : installedDirs) {
+                const QString dirLower = dir.toLower();
+                bool alreadyMatched = false;
+                for (const ModInfo& mod : m_mods) {
+                    QString ip = mod.installPath.toLower();
+                    ip.remove('\'');
+                    QString dl = dir.toLower();
+                    dl.remove('\'');
+                    if (mod.isInstalled && ip.endsWith(dl)) {
+                        alreadyMatched = true;
+                        break;
+                    }
+                }
+                if (alreadyMatched) continue;
+
+                QList<int> candidates;
+                for (int i = 0; i < m_mods.size(); ++i) {
+                    const ModInfo& mod = m_mods[i];
+                    if (!mod.isInstalled && !mod.addons.isEmpty()) {
+                        QString mp = mod.addons[0].path;
+                        mp.remove('\'');
+                        if (mp.compare(dir, Qt::CaseInsensitive) == 0) {
+                            candidates.append(i);
+                        }
+                    }
+                }
+                if (candidates.isEmpty()) continue;
+
+                int bestIdx = -1;
+                for (int i : candidates) {
+                    const QString title = m_mods[i].title.toLower();
+                    if (title == dirLower || QString(title).remove(' ') == QString(dirLower).remove(' ')) {
+                        bestIdx = i;
+                        break;
+                    }
+                }
+                if (bestIdx < 0) {
+                    for (int i : candidates) {
+                        QString norm = m_mods[i].title.toLower();
+                        norm.remove(' ');
+                        QString dirNorm = dirLower;
+                        dirNorm.remove(' ');
+                        if (norm.startsWith(dirNorm)) {
+                            if (norm.length() == dirNorm.length()) {
+                                bestIdx = i; break;
+                            }
+                            QChar next = norm.at(dirNorm.length());
+                            if (!next.isLetterOrNumber()) {
+                                bestIdx = i; break;
+                            }
+                        }
+                    }
+                }
+
+                if (bestIdx < 0)
+                    bestIdx = candidates[0];
+
+                if (bestIdx >= 0) {
+                    m_mods[bestIdx].isInstalled = true;
+                    m_mods[bestIdx].installPath = addonsDir.filePath(dir);
+                    matchedCount++;
+                    pathMatch++;
+                }
+            }
+
+        spdlog::info("Installed check: {} addons matched (title={} space={} tracked={} path={}) of {} folders",
+                     matchedCount, titleMatch, spaceMatch, trackedMatch, pathMatch, installedDirs.size());
+
+        if (matchedCount < installedDirs.size()) {
+            QStringList unmatched;
+            for (const QString& dir : installedDirs) {
+                bool found = false;
+                for (const ModInfo& mod : m_mods) {
+                    if (mod.isInstalled) {
+                        QString ip = mod.installPath.toLower();
+                        ip.remove('\'');
+                        QString dl = dir.toLower();
+                        dl.remove('\'');
+                        if (ip.endsWith(dl)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found)
+                    unmatched.append(dir);
+            }
+            unmatched.sort();
+            for (const QString& dir : unmatched) {
+                QStringList claimants;
+                for (const ModInfo& mod : m_mods) {
+                    if (!mod.addons.isEmpty()) {
+                        QString mp = mod.addons[0].path;
+                        mp.remove('\'');
+                        if (mp.compare(dir, Qt::CaseInsensitive) == 0) {
+                            claimants.append(mod.title);
+                        }
+                    }
+                }
+                if (!claimants.isEmpty()) {
+                    spdlog::info("  unmatched folder: '{}' claimed by {} mod(s): {}", 
+                                 dir.toStdString(), claimants.size(), claimants.join(", ").toStdString());
+                } else {
+                    spdlog::info("  unmatched folder: '{}' (no known mod claims this)", dir.toStdString());
+                }
+            }
+        }
 
         });
 
@@ -752,21 +903,49 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         return;
     }
 
+    // Fallback: find the mod and match by addons[0].path or title
+    const ModInfo* mod = nullptr;
+    for (const ModInfo& m : m_mods) {
+        if (m.id == modId) { mod = &m; break; }
+    }
+
     QDir addonsDir(addonsPath);
     if (!addonsDir.exists()) {
         spdlog::warn("uninstallAddon: Addons directory does not exist");
         return;
     }
 
-    const QString lowerTitle = title.toLower();
-    const QString lowerTitleNoSpaces = QString(lowerTitle).remove(' ');
-
     const QStringList dirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
+    // Try addons[0].path first (the folder name the mod creates)
+    if (mod && !mod->addons.isEmpty()) {
+        QString pathName = mod->addons[0].path;
+        pathName.remove('\'');
+        for (const QString& dir : dirs) {
+            QString d = dir;
+            d.remove('\'');
+            if (d.compare(pathName, Qt::CaseInsensitive) == 0) {
+                const QString fullPath = addonsDir.filePath(dir);
+                spdlog::info("uninstallAddon: removing {} (path match)", fullPath.toStdString());
+                QDir(fullPath).removeRecursively();
+                emit addonUninstallFinished(modId);
+                refreshInstalledStatus();
+                return;
+            }
+        }
+    }
+
+    // Try title matching
+    const QString lowerTitle = title.toLower();
+    const QString lowerTitleNoSpaces = QString(lowerTitle).remove(' ').remove('\'');
+    QString strippedTitle = lowerTitleNoSpaces;
+    strippedTitle.remove(QRegularExpression("[\\d.]+$"));
+
     for (const QString& dir : dirs) {
         QString lowerDir = dir.toLower();
-        if (lowerDir == lowerTitle || lowerDir == lowerTitleNoSpaces) {
+        if (lowerDir == lowerTitle || lowerDir == lowerTitleNoSpaces || lowerDir == strippedTitle) {
             const QString fullPath = addonsDir.filePath(dir);
-            spdlog::info("uninstallAddon: removing {} (fallback)", fullPath.toStdString());
+            spdlog::info("uninstallAddon: removing {} (title match)", fullPath.toStdString());
             QDir(fullPath).removeRecursively();
             emit addonUninstallFinished(modId);
             refreshInstalledStatus();
@@ -774,9 +953,10 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         }
         QString lowerDirNoSpaces = lowerDir;
         lowerDirNoSpaces.remove(' ');
-        if (lowerDirNoSpaces == lowerTitleNoSpaces) {
+        lowerDirNoSpaces.remove('\'');
+        if (lowerDirNoSpaces == lowerTitleNoSpaces || lowerDirNoSpaces == strippedTitle) {
             const QString fullPath = addonsDir.filePath(dir);
-            spdlog::info("uninstallAddon: removing {} (fallback)", fullPath.toStdString());
+            spdlog::info("uninstallAddon: removing {} (title match, no spaces)", fullPath.toStdString());
             QDir(fullPath).removeRecursively();
             emit addonUninstallFinished(modId);
             refreshInstalledStatus();

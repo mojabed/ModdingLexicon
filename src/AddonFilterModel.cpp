@@ -166,10 +166,11 @@ bool AddonFilterModel::lessThan(const QModelIndex& left, const QModelIndex& righ
     } else if (m_sortMode == QStringLiteral("api")) {
         leftVal = sourceModel()->data(left, AddonModel::ApiVersionRole).toInt();
         rightVal = sourceModel()->data(right, AddonModel::ApiVersionRole).toInt();
-    } else {
-        return QString::localeAwareCompare(
+    } else if (m_sortMode == QStringLiteral("title")) {
+        int cmp = QString::localeAwareCompare(
             sourceModel()->data(left, AddonModel::TitleRole).toString(),
-            sourceModel()->data(right, AddonModel::TitleRole).toString()) < 0;
+            sourceModel()->data(right, AddonModel::TitleRole).toString());
+        return m_sortOrder == Qt::AscendingOrder ? cmp < 0 : cmp > 0;
     }
 
     if (leftVal != rightVal)
