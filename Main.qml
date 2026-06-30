@@ -25,7 +25,6 @@ ApplicationWindow {
     property bool viewingCategoryAddons: false
     property var activeDetailWindow: null
 
-    // Custom title bar height
     readonly property int titleBarHeight: 32
 
     function showAddonDetail(data) {

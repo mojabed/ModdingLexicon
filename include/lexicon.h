@@ -33,6 +33,8 @@ public:
 
     Q_INVOKABLE void fetchAddonDescription(const QString& url);
     Q_INVOKABLE void installAddon(const QString& modId, const QString& title, const QString& downloadUrl);
+    Q_INVOKABLE void uninstallAddon(const QString& modId, const QString& title);
+    Q_INVOKABLE void refreshInstalledStatus();
     QString currentDescription() const { return m_currentDescription; }
 
 signals:
@@ -44,6 +46,7 @@ signals:
     void addonInstallProgress(const QString& modId, int percent);
     void addonInstallFinished(const QString& modId);
     void addonInstallFailed(const QString& modId, const QString& error);
+    void addonUninstallFinished(const QString& modId);
 
 private slots:
     void onParsingFinished();
@@ -65,11 +68,17 @@ private:
     void checkInstalledAddons();
     bool loadCachedMasterList();
 
+    void loadInstalledFolders();
+    void saveInstalledFolders();
+    void trackInstalledFolders(const QString& modId, const QStringList& before, const QStringList& after);
+
     QString m_masterListPath;
     QString m_categoryListPath;
+    QString m_installedFoldersPath;
     QList<ModInfo> m_mods;
     QMap<QString, QString> m_categoryNames;
     QMap<QString, QString> m_categoryIcons;
+    QMap<QString, QStringList> m_installedFolders;
     QString m_discontinuedCategoryId;
 
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;

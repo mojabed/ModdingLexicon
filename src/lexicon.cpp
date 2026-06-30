@@ -3,6 +3,10 @@
 #include <QDir>
 #include <QProcess>
 #include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QSet>
 #include <chrono>
 #include <QtConcurrent>
 #include <algorithm>
@@ -59,6 +63,9 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     QDir().mkpath(appData);
     m_masterListPath = appData + "/filelist.json";
     m_categoryListPath = appData + "/categorylist.json";
+    m_installedFoldersPath = appData + "/installed_folders.json";
+
+    loadInstalledFolders();
 
     updateCategoryList();
     updateMasterList();
@@ -221,6 +228,9 @@ void Lexicon::checkInstalledAddons() {
 
         int matchedCount = 0;
         for (ModInfo& mod : m_mods) {
+            mod.isInstalled = false;
+            mod.installPath.clear();
+
             const QString lowerTitle = mod.title.toLower();
 
             if (installedDirsSet.contains(lowerTitle)) {
@@ -244,7 +254,21 @@ void Lexicon::checkInstalledAddons() {
                     }
                 }
             }
+
+            if (!mod.isInstalled && m_installedFolders.contains(mod.id)) {
+                const QStringList tracked = m_installedFolders[mod.id];
+                for (const QString& folder : tracked) {
+                    if (installedDirsSet.contains(folder.toLower())) {
+                        mod.isInstalled = true;
+                        mod.installPath = addonsDir.filePath(folder);
+                        matchedCount++;
+                        break;
+                    }
+                }
+            }
         }
+
+        spdlog::info("Installed check: {} addons matched", matchedCount);
 
         });
 
@@ -367,7 +391,6 @@ void Lexicon::installAddon(const QString& modId, const QString& title, const QSt
             return;
         }
 
-        // Save downloaded data to temp file
         QFile file(tempFilePath);
         if (!file.open(QIODevice::WriteOnly)) {
             spdlog::error("installAddon: failed to write temp file {}", tempFilePath.toStdString());
@@ -379,12 +402,16 @@ void Lexicon::installAddon(const QString& modId, const QString& title, const QSt
 
         spdlog::info("installAddon: downloaded zip to {}, extracting...", tempFilePath.toStdString());
 
-        // Extract using PowerShell Expand-Archive
+        // Snapshot AddOns directory before extraction
+        QDir addonsDir(addonsPath);
+        const QStringList beforeDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
+        // Extract using powershell
         auto* process = new QProcess(this);
         process->setWorkingDirectory(addonsPath);
 
         connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-                this, [this, process, modId, tempFilePath](int exitCode, QProcess::ExitStatus) {
+                this, [this, process, modId, addonsPath, tempFilePath, beforeDirs](int exitCode, QProcess::ExitStatus) {
                     process->deleteLater();
 
                     if (exitCode != 0) {
@@ -396,7 +423,14 @@ void Lexicon::installAddon(const QString& modId, const QString& title, const QSt
                     }
 
                     spdlog::info("installAddon: extraction complete for {}", modId.toStdString());
+
+                    // Find newly created folders and track them
+                    QDir dir(addonsPath);
+                    const QStringList afterDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+                    trackInstalledFolders(modId, beforeDirs, afterDirs);
+
                     QFile::remove(tempFilePath);
+                    refreshInstalledStatus();
                     emit addonInstallFinished(modId);
                 });
 
@@ -406,6 +440,136 @@ void Lexicon::installAddon(const QString& modId, const QString& title, const QSt
 
         process->start(command);
     });
+}
+
+void Lexicon::uninstallAddon(const QString& modId, const QString& title)
+{
+    Q_UNUSED(title)
+
+    const QString addonsPath = Pathing::getInstance()->paths().addons;
+    if (addonsPath.isEmpty()) {
+        spdlog::error("uninstallAddon: Addons path is empty");
+        return;
+    }
+
+    if (m_installedFolders.contains(modId)) {
+        const QStringList folders = m_installedFolders.take(modId);
+        saveInstalledFolders();
+
+        QDir addonsDir(addonsPath);
+        for (const QString& folder : folders) {
+            const QString fullPath = addonsDir.filePath(folder);
+            spdlog::info("uninstallAddon: removing {}", fullPath.toStdString());
+            QDir(fullPath).removeRecursively();
+        }
+        emit addonUninstallFinished(modId);
+        refreshInstalledStatus();
+        return;
+    }
+
+    QDir addonsDir(addonsPath);
+    if (!addonsDir.exists()) {
+        spdlog::warn("uninstallAddon: Addons directory does not exist");
+        return;
+    }
+
+    const QString lowerTitle = title.toLower();
+    const QString lowerTitleNoSpaces = QString(lowerTitle).remove(' ');
+
+    const QStringList dirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString& dir : dirs) {
+        QString lowerDir = dir.toLower();
+        if (lowerDir == lowerTitle || lowerDir == lowerTitleNoSpaces) {
+            const QString fullPath = addonsDir.filePath(dir);
+            spdlog::info("uninstallAddon: removing {} (fallback)", fullPath.toStdString());
+            QDir(fullPath).removeRecursively();
+            emit addonUninstallFinished(modId);
+            refreshInstalledStatus();
+            return;
+        }
+        QString lowerDirNoSpaces = lowerDir;
+        lowerDirNoSpaces.remove(' ');
+        if (lowerDirNoSpaces == lowerTitleNoSpaces) {
+            const QString fullPath = addonsDir.filePath(dir);
+            spdlog::info("uninstallAddon: removing {} (fallback)", fullPath.toStdString());
+            QDir(fullPath).removeRecursively();
+            emit addonUninstallFinished(modId);
+            refreshInstalledStatus();
+            return;
+        }
+    }
+
+    spdlog::warn("uninstallAddon: no folders found for mod {}", modId.toStdString());
+}
+
+void Lexicon::refreshInstalledStatus()
+{
+    checkInstalledAddons();
+}
+
+void Lexicon::loadInstalledFolders()
+{
+    QFile file(m_installedFoldersPath);
+    if (!file.open(QIODevice::ReadOnly))
+        return;
+
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    file.close();
+
+    if (!doc.isObject())
+        return;
+
+    const QJsonObject root = doc.object();
+    for (auto it = root.begin(); it != root.end(); ++it) {
+        const QJsonArray arr = it.value().toArray();
+        QStringList folders;
+        folders.reserve(arr.size());
+        for (const QJsonValue& v : arr)
+            folders.append(v.toString());
+        if (!folders.isEmpty())
+            m_installedFolders[it.key()] = folders;
+    }
+
+    spdlog::info("Loaded {} installed folder entries", m_installedFolders.size());
+}
+
+void Lexicon::saveInstalledFolders()
+{
+    QJsonObject root;
+    for (auto it = m_installedFolders.begin(); it != m_installedFolders.end(); ++it) {
+        QJsonArray arr;
+        for (const QString& folder : it.value())
+            arr.append(folder);
+        root[it.key()] = arr;
+    }
+
+    QFile file(m_installedFoldersPath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        spdlog::error("Failed to save installed folders: {}", m_installedFoldersPath.toStdString());
+        return;
+    }
+    file.write(QJsonDocument(root).toJson());
+    file.close();
+}
+
+void Lexicon::trackInstalledFolders(const QString& modId, const QStringList& before, const QStringList& after)
+{
+    QSet<QString> beforeSet(before.begin(), before.end());
+    QStringList newFolders;
+    for (const QString& dir : after) {
+        if (!beforeSet.contains(dir))
+            newFolders.append(dir);
+    }
+
+    if (newFolders.isEmpty()) {
+        spdlog::warn("trackInstalledFolders: no new folders detected for mod {}", modId.toStdString());
+        return;
+    }
+
+    m_installedFolders[modId] = newFolders;
+    saveInstalledFolders();
+    spdlog::info("Tracked {} folders for mod {}: {}", newFolders.size(), modId.toStdString(),
+                 newFolders.join(", ").toStdString());
 }
 
 void Lexicon::fetchAddonDescription(const QString& fileInfoUrl)

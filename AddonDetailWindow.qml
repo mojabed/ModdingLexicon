@@ -92,29 +92,42 @@ ApplicationWindow {
                 Layout.preferredWidth: 130
                 Layout.preferredHeight: 44
                 Layout.alignment: Qt.AlignTop
-                visible: !detailWindow.addonIsInstalled || detailWindow.addonIsInstalling
-                enabled: !detailWindow.addonIsInstalling && detailWindow.addonDownloadUrl !== ""
+                enabled: !detailWindow.addonIsInstalling && (detailWindow.addonIsInstalled || detailWindow.addonDownloadUrl !== "")
 
                 font.family: detailWindow.appFontFamily
                 font.pixelSize: 16
                 font.bold: true
 
+                readonly property bool isUninstall: detailWindow.addonIsInstalled && !detailWindow.addonIsInstalling
+
                 background: Rectangle {
                     radius: 22
-                    color: installButton.enabled
-                           ? (installButton.hovered ? Material.color(Material.DeepPurple, Material.Shade400)
-                                                    : Material.color(Material.DeepPurple, Material.Shade500))
-                           : Material.color(Material.Grey, Material.Shade700)
-                    border.color: installButton.enabled
-                                  ? Material.color(Material.DeepPurple, Material.Shade300)
-                                  : Material.color(Material.Grey, Material.Shade600)
+                    color: {
+                        if (!installButton.enabled)
+                            return Material.color(Material.Grey, Material.Shade700)
+                        if (installButton.isUninstall)
+                            return installButton.hovered ? "#5e2a2a" : "#4a2020"
+                        return installButton.hovered ? Material.color(Material.DeepPurple, Material.Shade400)
+                                                     : Material.color(Material.DeepPurple, Material.Shade500)
+                    }
+                    border.color: {
+                        if (!installButton.enabled)
+                            return Material.color(Material.Grey, Material.Shade600)
+                        if (installButton.isUninstall)
+                            return installButton.hovered ? "#8e4a4a" : "#6e3535"
+                        return Material.color(Material.DeepPurple, Material.Shade300)
+                    }
                     border.width: 1
                 }
 
                 contentItem: Text {
-                    text: detailWindow.addonIsInstalling
-                          ? "Installing " + detailWindow.addonInstallPercent + "%"
-                          : "Install"
+                    text: {
+                        if (detailWindow.addonIsInstalling)
+                            return "Installing " + detailWindow.addonInstallPercent + "%"
+                        if (installButton.isUninstall)
+                            return "Uninstall"
+                        return "Install"
+                    }
                     color: "white"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -122,7 +135,14 @@ ApplicationWindow {
                 }
 
                 onClicked: {
-                    if (detailWindow.lexiconController) {
+                    if (!detailWindow.lexiconController)
+                        return
+                    if (installButton.isUninstall) {
+                        detailWindow.lexiconController.uninstallAddon(
+                            detailWindow.addonId,
+                            detailWindow.addonTitle
+                        )
+                    } else {
                         detailWindow.addonIsInstalling = true
                         detailWindow.addonInstallPercent = 0
                         detailWindow.lexiconController.installAddon(
@@ -282,6 +302,12 @@ ApplicationWindow {
             if (modId === detailWindow.addonId) {
                 detailWindow.addonIsInstalling = false
                 console.error("Install failed:", error)
+            }
+        }
+
+        function onAddonUninstallFinished(modId) {
+            if (modId === detailWindow.addonId) {
+                detailWindow.addonIsInstalled = false
             }
         }
     }
