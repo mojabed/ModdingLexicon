@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QSet>
+#include <QTimer>
 #include <chrono>
 #include <QtConcurrent>
 #include <algorithm>
@@ -341,23 +342,11 @@ void Lexicon::populateCategories() {
     }
 }
 
-void Lexicon::installAddon(const QString& modId, const QString& title, const QString& downloadUrl)
+void Lexicon::downloadAndExtractAddon(const QString& modId, const QString& title,
+                                     const QString& downloadUrl,
+                                     std::function<void(bool, const QString&)> onDone)
 {
-    if (downloadUrl.isEmpty()) {
-        spdlog::error("installAddon: empty download URL for mod {}", modId.toStdString());
-        emit addonInstallFailed(modId, "No download URL available");
-        return;
-    }
-
     const QString addonsPath = Pathing::getInstance()->paths().addons;
-    if (addonsPath.isEmpty()) {
-        spdlog::error("installAddon: Addons path is empty");
-        emit addonInstallFailed(modId, "Addons directory not configured");
-        return;
-    }
-
-    QDir().mkpath(addonsPath);
-
     const QString tempFilePath = QDir::tempPath() + QStringLiteral("/moddinglexicon_%1.zip").arg(modId);
 
     spdlog::info("installAddon: downloading {} to {}", downloadUrl.toStdString(), tempFilePath.toStdString());
@@ -380,21 +369,21 @@ void Lexicon::installAddon(const QString& modId, const QString& title, const QSt
         }
     });
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply, manager, modId, addonsPath, tempFilePath]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, manager, modId, addonsPath, tempFilePath, onDone]() {
         reply->deleteLater();
         manager->deleteLater();
 
         if (reply->error() != QNetworkReply::NoError) {
             spdlog::error("installAddon: download failed: {}", reply->errorString().toStdString());
             QFile::remove(tempFilePath);
-            emit addonInstallFailed(modId, reply->errorString());
+            onDone(false, reply->errorString());
             return;
         }
 
         QFile file(tempFilePath);
         if (!file.open(QIODevice::WriteOnly)) {
             spdlog::error("installAddon: failed to write temp file {}", tempFilePath.toStdString());
-            emit addonInstallFailed(modId, "Failed to save downloaded file");
+            onDone(false, QStringLiteral("Failed to save downloaded file"));
             return;
         }
         file.write(reply->readAll());
@@ -402,36 +391,32 @@ void Lexicon::installAddon(const QString& modId, const QString& title, const QSt
 
         spdlog::info("installAddon: downloaded zip to {}, extracting...", tempFilePath.toStdString());
 
-        // Snapshot AddOns directory before extraction
         QDir addonsDir(addonsPath);
         const QStringList beforeDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 
-        // Extract using powershell
         auto* process = new QProcess(this);
         process->setWorkingDirectory(addonsPath);
 
         connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-                this, [this, process, modId, addonsPath, tempFilePath, beforeDirs](int exitCode, QProcess::ExitStatus) {
+                this, [this, process, modId, addonsPath, tempFilePath, beforeDirs, onDone](int exitCode, QProcess::ExitStatus) {
                     process->deleteLater();
 
                     if (exitCode != 0) {
                         QString err = process->readAllStandardError();
                         spdlog::error("installAddon: extraction failed: {}", err.toStdString());
                         QFile::remove(tempFilePath);
-                        emit addonInstallFailed(modId, "Extraction failed: " + err);
+                        onDone(false, QStringLiteral("Extraction failed: ") + err);
                         return;
                     }
 
                     spdlog::info("installAddon: extraction complete for {}", modId.toStdString());
 
-                    // Find newly created folders and track them
                     QDir dir(addonsPath);
                     const QStringList afterDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
                     trackInstalledFolders(modId, beforeDirs, afterDirs);
 
                     QFile::remove(tempFilePath);
-                    refreshInstalledStatus();
-                    emit addonInstallFinished(modId);
+                    onDone(true, QString());
                 });
 
         QString command = QStringLiteral(
@@ -440,6 +425,112 @@ void Lexicon::installAddon(const QString& modId, const QString& title, const QSt
 
         process->start(command);
     });
+}
+
+void Lexicon::installDependenciesFor(const QString& modId, const QString& addonsPath)
+{
+    // Find the mod in m_mods
+    const ModInfo* mod = nullptr;
+    for (const ModInfo& m : m_mods) {
+        if (m.id == modId) {
+            mod = &m;
+            break;
+        }
+    }
+    if (!mod) return;
+
+    // Collect unique dependency titles
+    QSet<QString> depTitles;
+    for (const Dependencies& dep : mod->addons) {
+        for (const QString& title : dep.requiredDependencies)
+            depTitles.insert(title);
+        for (const QString& title : dep.optionalDependencies)
+            depTitles.insert(title);
+    }
+
+    if (depTitles.isEmpty()) {
+        refreshInstalledStatus();
+        emit addonInstallFinished(modId);
+        return;
+    }
+
+    // Resolve titles to ModInfo entries
+    struct DepEntry { QString id; QString title; QString downloadUrl; };
+    QList<DepEntry> toInstall;
+    for (const QString& depTitle : depTitles) {
+        const QString lowerTitle = depTitle.toLower();
+        for (const ModInfo& m : m_mods) {
+            if (m.title.toLower() == lowerTitle && !m.isInstalled && m.id != modId) {
+                toInstall.append({ m.id, m.title, m.downloadUrl.toString() });
+                break;
+            }
+        }
+    }
+
+    if (toInstall.isEmpty()) {
+        refreshInstalledStatus();
+        emit addonInstallFinished(modId);
+        return;
+    }
+
+    emit addonInstallStatusChanged(modId, QStringLiteral("installing_dependencies"));
+
+    // Install sequentially using index-based recursion
+    auto sharedIdx = std::make_shared<int>(0);
+    auto sharedList = std::make_shared<QList<DepEntry>>(toInstall);
+
+    std::function<void()> installNext;
+    installNext = [this, modId, sharedIdx, sharedList, &installNext]() {
+        if (*sharedIdx >= sharedList->size()) {
+            refreshInstalledStatus();
+            emit addonInstallFinished(modId);
+            return;
+        }
+
+        const DepEntry& dep = sharedList->at(*sharedIdx);
+        emit addonDependencyInstallStarted(modId, dep.title);
+
+        downloadAndExtractAddon(dep.id, dep.title, dep.downloadUrl,
+            [this, modId, sharedIdx, &installNext](bool success, const QString& error) {
+                if (!success) {
+                    spdlog::warn("installAddon: dependency failed: {}", error.toStdString());
+                    // Continue with next dependency even if one fails
+                }
+                (*sharedIdx)++;
+                installNext();
+            });
+    };
+
+    installNext();
+}
+
+void Lexicon::installAddon(const QString& modId, const QString& title, const QString& downloadUrl)
+{
+    Q_UNUSED(title)
+
+    if (downloadUrl.isEmpty()) {
+        spdlog::error("installAddon: empty download URL for mod {}", modId.toStdString());
+        emit addonInstallFailed(modId, "No download URL available");
+        return;
+    }
+
+    const QString addonsPath = Pathing::getInstance()->paths().addons;
+    if (addonsPath.isEmpty()) {
+        spdlog::error("installAddon: Addons path is empty");
+        emit addonInstallFailed(modId, "Addons directory not configured");
+        return;
+    }
+
+    QDir().mkpath(addonsPath);
+
+    downloadAndExtractAddon(modId, QString() /*title unused*/, downloadUrl,
+        [this, modId, addonsPath](bool success, const QString& error) {
+            if (!success) {
+                emit addonInstallFailed(modId, error);
+                return;
+            }
+            installDependenciesFor(modId, addonsPath);
+        });
 }
 
 void Lexicon::uninstallAddon(const QString& modId, const QString& title)

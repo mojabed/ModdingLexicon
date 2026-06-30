@@ -21,6 +21,8 @@ ApplicationWindow {
     property bool addonIsInstalled: false
     property bool addonIsInstalling: false
     property int addonInstallPercent: 0
+    property string addonInstallStatus: ""
+    property string addonDependencyTitle: ""
     property url addonIconSource
 
     property string appFontFamily: "Segoe UI"
@@ -89,7 +91,7 @@ ApplicationWindow {
 
             Button {
                 id: installButton
-                Layout.preferredWidth: 130
+                Layout.preferredWidth: 150
                 Layout.preferredHeight: 44
                 Layout.alignment: Qt.AlignTop
                 enabled: !detailWindow.addonIsInstalling && (detailWindow.addonIsInstalled || detailWindow.addonDownloadUrl !== "")
@@ -122,8 +124,11 @@ ApplicationWindow {
 
                 contentItem: Text {
                     text: {
-                        if (detailWindow.addonIsInstalling)
+                        if (detailWindow.addonIsInstalling) {
+                            if (detailWindow.addonInstallStatus === "installing_dependencies" && detailWindow.addonDependencyTitle)
+                                return "Dep: " + detailWindow.addonDependencyTitle
                             return "Installing " + detailWindow.addonInstallPercent + "%"
+                        }
                         if (installButton.isUninstall)
                             return "Uninstall"
                         return "Install"
@@ -132,6 +137,8 @@ ApplicationWindow {
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font: installButton.font
+                    fontSizeMode: Text.HorizontalFit
+                    minimumPixelSize: 10
                 }
 
                 onClicked: {
@@ -145,6 +152,8 @@ ApplicationWindow {
                     } else {
                         detailWindow.addonIsInstalling = true
                         detailWindow.addonInstallPercent = 0
+                        detailWindow.addonInstallStatus = ""
+                        detailWindow.addonDependencyTitle = ""
                         detailWindow.lexiconController.installAddon(
                             detailWindow.addonId,
                             detailWindow.addonTitle,
@@ -294,6 +303,8 @@ ApplicationWindow {
         function onAddonInstallFinished(modId) {
             if (modId === detailWindow.addonId) {
                 detailWindow.addonIsInstalling = false
+                detailWindow.addonInstallStatus = ""
+                detailWindow.addonDependencyTitle = ""
                 detailWindow.addonIsInstalled = true
             }
         }
@@ -301,6 +312,8 @@ ApplicationWindow {
         function onAddonInstallFailed(modId, error) {
             if (modId === detailWindow.addonId) {
                 detailWindow.addonIsInstalling = false
+                detailWindow.addonInstallStatus = ""
+                detailWindow.addonDependencyTitle = ""
                 console.error("Install failed:", error)
             }
         }
@@ -308,6 +321,19 @@ ApplicationWindow {
         function onAddonUninstallFinished(modId) {
             if (modId === detailWindow.addonId) {
                 detailWindow.addonIsInstalled = false
+            }
+        }
+
+        function onAddonInstallStatusChanged(modId, status) {
+            if (modId === detailWindow.addonId) {
+                detailWindow.addonInstallStatus = status
+            }
+        }
+
+        function onAddonDependencyInstallStarted(modId, depTitle) {
+            if (modId === detailWindow.addonId) {
+                detailWindow.addonDependencyTitle = depTitle
+                detailWindow.addonInstallPercent = 0
             }
         }
     }

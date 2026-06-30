@@ -4,6 +4,7 @@
 #include <QtQml>
 #include <QFutureWatcher>
 #include <QMap>
+#include <functional>
 
 #include "ModType.h"
 #include "CategoryModel.h"
@@ -47,6 +48,8 @@ signals:
     void addonInstallFinished(const QString& modId);
     void addonInstallFailed(const QString& modId, const QString& error);
     void addonUninstallFinished(const QString& modId);
+    void addonDependencyInstallStarted(const QString& modId, const QString& depTitle);
+    void addonInstallStatusChanged(const QString& modId, const QString& status);
 
 private slots:
     void onParsingFinished();
@@ -71,6 +74,10 @@ private:
     void loadInstalledFolders();
     void saveInstalledFolders();
     void trackInstalledFolders(const QString& modId, const QStringList& before, const QStringList& after);
+    void downloadAndExtractAddon(const QString& modId, const QString& title,
+                                 const QString& downloadUrl,
+                                 std::function<void(bool, const QString&)> onDone);
+    void installDependenciesFor(const QString& modId, const QString& addonsPath);
 
     QString m_masterListPath;
     QString m_categoryListPath;
