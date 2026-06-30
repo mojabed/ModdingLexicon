@@ -113,7 +113,8 @@ Item {
                     "isInstalled": model.isInstalled || false,
                     "iconSource": model.iconSource,
                     "fileInfoUri": model.fileInfoUri || "",
-                    "modId": model.modId || ""
+                    "modId": model.modId || "",
+                    "downloadUrl": model.downloadUrl || ""
                 })
             }
         }

@@ -13,10 +13,14 @@ ApplicationWindow {
     property string addonCategory: ""
     property string addonDescription: ""
     property string addonFileInfoUri: ""
+    property string addonId: ""
+    property string addonDownloadUrl: ""
     property int addonDownloads: 0
     property int addonDownloadsMonthly: 0
     property int addonFavorites: 0
     property bool addonIsInstalled: false
+    property bool addonIsInstalling: false
+    property int addonInstallPercent: 0
     property url addonIconSource
 
     property string appFontFamily: "Segoe UI"
@@ -47,7 +51,7 @@ ApplicationWindow {
         anchors.margins: 16
         spacing: 10
 
-        // Header: icon + title
+        // Header: icon + title + install button
         RowLayout {
             spacing: 12
 
@@ -78,6 +82,55 @@ ApplicationWindow {
                     color: "#aaaaaa"
                     font.family: detailWindow.appFontFamily
                     font.pixelSize: 14
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Button {
+                id: installButton
+                Layout.preferredWidth: 130
+                Layout.preferredHeight: 44
+                Layout.alignment: Qt.AlignTop
+                visible: !detailWindow.addonIsInstalled || detailWindow.addonIsInstalling
+                enabled: !detailWindow.addonIsInstalling && detailWindow.addonDownloadUrl !== ""
+
+                font.family: detailWindow.appFontFamily
+                font.pixelSize: 16
+                font.bold: true
+
+                background: Rectangle {
+                    radius: 22
+                    color: installButton.enabled
+                           ? (installButton.hovered ? Material.color(Material.DeepPurple, Material.Shade400)
+                                                    : Material.color(Material.DeepPurple, Material.Shade500))
+                           : Material.color(Material.Grey, Material.Shade700)
+                    border.color: installButton.enabled
+                                  ? Material.color(Material.DeepPurple, Material.Shade300)
+                                  : Material.color(Material.Grey, Material.Shade600)
+                    border.width: 1
+                }
+
+                contentItem: Text {
+                    text: detailWindow.addonIsInstalling
+                          ? "Installing " + detailWindow.addonInstallPercent + "%"
+                          : "Install"
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font: installButton.font
+                }
+
+                onClicked: {
+                    if (detailWindow.lexiconController) {
+                        detailWindow.addonIsInstalling = true
+                        detailWindow.addonInstallPercent = 0
+                        detailWindow.lexiconController.installAddon(
+                            detailWindow.addonId,
+                            detailWindow.addonTitle,
+                            detailWindow.addonDownloadUrl
+                        )
+                    }
                 }
             }
         }
@@ -197,6 +250,38 @@ ApplicationWindow {
                         imageOverlay.height = Math.min(sourceSize.height + 44, imageOverlay.parent.height - 40)
                     }
                 }
+            }
+        }
+    }
+
+    Connections {
+        target: detailWindow.lexiconController
+        enabled: detailWindow.lexiconController !== null
+
+        function onAddonInstallStarted(modId) {
+            if (modId === detailWindow.addonId) {
+                detailWindow.addonIsInstalling = true
+                detailWindow.addonInstallPercent = 0
+            }
+        }
+
+        function onAddonInstallProgress(modId, percent) {
+            if (modId === detailWindow.addonId) {
+                detailWindow.addonInstallPercent = percent
+            }
+        }
+
+        function onAddonInstallFinished(modId) {
+            if (modId === detailWindow.addonId) {
+                detailWindow.addonIsInstalling = false
+                detailWindow.addonIsInstalled = true
+            }
+        }
+
+        function onAddonInstallFailed(modId, error) {
+            if (modId === detailWindow.addonId) {
+                detailWindow.addonIsInstalling = false
+                console.error("Install failed:", error)
             }
         }
     }

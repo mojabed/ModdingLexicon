@@ -32,6 +32,7 @@ public:
     CategoryModel* categoryModel() const;
 
     Q_INVOKABLE void fetchAddonDescription(const QString& url);
+    Q_INVOKABLE void installAddon(const QString& modId, const QString& title, const QString& downloadUrl);
     QString currentDescription() const { return m_currentDescription; }
 
 signals:
@@ -39,6 +40,10 @@ signals:
     void downloadError(const QString& message);
     void addonDescriptionReady(const QString& url, const QString& description);
     void currentDescriptionChanged();
+    void addonInstallStarted(const QString& modId);
+    void addonInstallProgress(const QString& modId, int percent);
+    void addonInstallFinished(const QString& modId);
+    void addonInstallFailed(const QString& modId, const QString& error);
 
 private slots:
     void onParsingFinished();

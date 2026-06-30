@@ -55,6 +55,8 @@ ApplicationWindow {
             "addonFavorites": data.favorites || 0,
             "addonIsInstalled": data.isInstalled || false,
             "addonIconSource": data.iconSource || "",
+            "addonId": data.modId || "",
+            "addonDownloadUrl": data.downloadUrl || "",
             "lexiconController": lexicon
         })
 

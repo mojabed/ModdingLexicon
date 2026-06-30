@@ -1,9 +1,15 @@
 #include <spdlog/spdlog.h>
 #include <QStandardPaths>
 #include <QDir>
+#include <QProcess>
+#include <QFile>
 #include <chrono>
 #include <QtConcurrent>
 #include <algorithm>
+
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkReply>
+#include <QtNetwork/QNetworkRequest>
 
 #include "lexicon.h"
 #include "HttpClient.h"
@@ -309,6 +315,97 @@ void Lexicon::populateCategories() {
     } catch (const std::exception& e) {
         spdlog::error("Exception in populateCategories: {}", e.what());
     }
+}
+
+void Lexicon::installAddon(const QString& modId, const QString& title, const QString& downloadUrl)
+{
+    if (downloadUrl.isEmpty()) {
+        spdlog::error("installAddon: empty download URL for mod {}", modId.toStdString());
+        emit addonInstallFailed(modId, "No download URL available");
+        return;
+    }
+
+    const QString addonsPath = Pathing::getInstance()->paths().addons;
+    if (addonsPath.isEmpty()) {
+        spdlog::error("installAddon: Addons path is empty");
+        emit addonInstallFailed(modId, "Addons directory not configured");
+        return;
+    }
+
+    QDir().mkpath(addonsPath);
+
+    const QString tempFilePath = QDir::tempPath() + QStringLiteral("/moddinglexicon_%1.zip").arg(modId);
+
+    spdlog::info("installAddon: downloading {} to {}", downloadUrl.toStdString(), tempFilePath.toStdString());
+    emit addonInstallStarted(modId);
+
+    auto* manager = new QNetworkAccessManager(this);
+    QUrl url(downloadUrl);
+    QNetworkRequest request(url);
+    request.setRawHeader("User-Agent", "ModdingLexicon/1.0");
+    request.setRawHeader("Accept", "*/*");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
+
+    QNetworkReply* reply = manager->get(request);
+
+    connect(reply, &QNetworkReply::downloadProgress, this, [this, modId](qint64 received, qint64 total) {
+        if (total > 0) {
+            int percent = static_cast<int>((received * 100) / total);
+            emit addonInstallProgress(modId, percent);
+        }
+    });
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, manager, modId, addonsPath, tempFilePath]() {
+        reply->deleteLater();
+        manager->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            spdlog::error("installAddon: download failed: {}", reply->errorString().toStdString());
+            QFile::remove(tempFilePath);
+            emit addonInstallFailed(modId, reply->errorString());
+            return;
+        }
+
+        // Save downloaded data to temp file
+        QFile file(tempFilePath);
+        if (!file.open(QIODevice::WriteOnly)) {
+            spdlog::error("installAddon: failed to write temp file {}", tempFilePath.toStdString());
+            emit addonInstallFailed(modId, "Failed to save downloaded file");
+            return;
+        }
+        file.write(reply->readAll());
+        file.close();
+
+        spdlog::info("installAddon: downloaded zip to {}, extracting...", tempFilePath.toStdString());
+
+        // Extract using PowerShell Expand-Archive
+        auto* process = new QProcess(this);
+        process->setWorkingDirectory(addonsPath);
+
+        connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, [this, process, modId, tempFilePath](int exitCode, QProcess::ExitStatus) {
+                    process->deleteLater();
+
+                    if (exitCode != 0) {
+                        QString err = process->readAllStandardError();
+                        spdlog::error("installAddon: extraction failed: {}", err.toStdString());
+                        QFile::remove(tempFilePath);
+                        emit addonInstallFailed(modId, "Extraction failed: " + err);
+                        return;
+                    }
+
+                    spdlog::info("installAddon: extraction complete for {}", modId.toStdString());
+                    QFile::remove(tempFilePath);
+                    emit addonInstallFinished(modId);
+                });
+
+        QString command = QStringLiteral(
+            "powershell -NoProfile -Command \"Expand-Archive -LiteralPath '%1' -DestinationPath '%2' -Force\"")
+            .arg(tempFilePath, addonsPath);
+
+        process->start(command);
+    });
 }
 
 void Lexicon::fetchAddonDescription(const QString& fileInfoUrl)

@@ -4,7 +4,7 @@
 
 #include "parser.h"
 
-const QString Parser::m_downloadUrlPrefix = "https://www.esoui.com/downloads/download";
+const QString Parser::m_downloadUrlPrefix = "https://cdn.esoui.com/downloads/file";
 
 namespace {
 QString readStringValue(const QJsonObject& object, const QStringList& keys) {
@@ -74,7 +74,16 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
 
     QString sanitizedTitle = mod.title;
     sanitizedTitle.remove(' ');
-    mod.downloadUrl = QUrl(m_downloadUrlPrefix + mod.id + "-" + sanitizedTitle);
+
+    // Build CDN download URL: https://cdn.esoui.com/downloads/file<id>/<timestamp>-<title>.zip
+    // lastUpdate may be in seconds or milliseconds; normalize to seconds
+    bool isTsNumber = false;
+    long long ts = mod.lastUpdate.toLongLong(&isTsNumber);
+    if (isTsNumber && ts > 9999999999LL) {
+        ts /= 1000;
+    }
+    QString timestampSecs = isTsNumber ? QString::number(ts) : QString();
+    mod.downloadUrl = QUrl(m_downloadUrlPrefix + mod.id + "/" + timestampSecs + "-" + sanitizedTitle + ".zip");
 
     if (json.contains("gameVersions") && json["gameVersions"].isArray()) {
         QJsonArray versionsArray = json["gameVersions"].toArray();
