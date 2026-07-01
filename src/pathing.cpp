@@ -2,8 +2,6 @@
 
 #include <spdlog/spdlog.h>
 #include <QStandardPaths>
-#include <QFileInfo>
-#include <QDir>
 
 Pathing* Pathing::instance = nullptr;
 QMutex Pathing::mtx;

@@ -2,9 +2,6 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
-#include <spdlog/spdlog.h>
-#include <algorithm>
-
 #include "parser.h"
 
 const QString Parser::m_downloadUrlPrefix = "https://cdn.esoui.com/downloads/file";

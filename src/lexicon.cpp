@@ -1,5 +1,4 @@
 #include <spdlog/spdlog.h>
-#include <QStandardPaths>
 #include <QDir>
 #include <QProcess>
 #include <QFile>
@@ -9,7 +8,6 @@
 #include <QSet>
 #include <QTimer>
 #include <QRegularExpression>
-#include <chrono>
 #include <QtConcurrent>
 #include <algorithm>
 

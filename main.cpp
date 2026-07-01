@@ -7,7 +7,6 @@
 #include <QQmlContext>
 #include <QDir>
 #include <QQuickWindow>
-#include <QSGRendererInterface>
 #include <QFontDatabase>
 
 #include <spdlog/spdlog.h>

@@ -1,7 +1,5 @@
 #include "CategoryModel.h"
 
-#include <spdlog/spdlog.h>
-
 CategoryModel::CategoryModel(QObject* parent)
     : QAbstractListModel(parent) {
 }
