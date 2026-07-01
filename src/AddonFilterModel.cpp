@@ -65,8 +65,7 @@ QString AddonFilterModel::sortMode() const {
 void AddonFilterModel::setSortMode(const QString& mode) {
     if (m_sortMode != mode) {
         m_sortMode = mode;
-        m_sortOrder = Qt::DescendingOrder;
-        invalidate();
+        sort(0, m_sortOrder);
         emit sortModeChanged();
     }
 }
@@ -78,8 +77,7 @@ Qt::SortOrder AddonFilterModel::sortOrder() const {
 void AddonFilterModel::setSortOrder(Qt::SortOrder order) {
     if (m_sortOrder != order) {
         m_sortOrder = order;
-        beginResetModel();
-        endResetModel();
+        sort(0, m_sortOrder);
         emit sortModeChanged();
     }
 }
@@ -170,11 +168,11 @@ bool AddonFilterModel::lessThan(const QModelIndex& left, const QModelIndex& righ
         int cmp = QString::localeAwareCompare(
             sourceModel()->data(left, AddonModel::TitleRole).toString(),
             sourceModel()->data(right, AddonModel::TitleRole).toString());
-        return m_sortOrder == Qt::AscendingOrder ? cmp < 0 : cmp > 0;
+        return cmp < 0;
     }
 
     if (leftVal != rightVal)
-        return m_sortOrder == Qt::DescendingOrder ? leftVal > rightVal : leftVal < rightVal;
+        return leftVal < rightVal;
 
     return QString::localeAwareCompare(
         sourceModel()->data(left, AddonModel::TitleRole).toString(),

@@ -168,6 +168,20 @@ ApplicationWindow {
                 lexicon.installedAddonsFilter.setCategoryFilter("")
             }
             lexicon.installedAddonsFilter.setSearchText("")
+
+            if (currentIndex === 0) {
+                // My Addons: alphabetical
+                lexicon.installedAddonsFilter.setShowInstalledOnly(true)
+                lexicon.installedAddonsFilter.setSortMode("title")
+                lexicon.installedAddonsFilter.setSortOrder(Qt.AscendingOrder)
+            } else if (currentIndex === 1) {
+                // Browse Addons: downloads
+                if (!window.viewingCategoryAddons) {
+                    lexicon.installedAddonsFilter.setShowInstalledOnly(false)
+                }
+                lexicon.installedAddonsFilter.setSortMode("downloads")
+                lexicon.installedAddonsFilter.setSortOrder(Qt.DescendingOrder)
+            }
         }
 
         MyAddonsView {

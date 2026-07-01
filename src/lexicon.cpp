@@ -36,7 +36,9 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     m_installedAddonsFilter->setSourceModel(m_addonModel);
     m_installedAddonsFilter->setShowInstalledOnly(true);
-    m_installedAddonsFilter->setExcludeBelowApiVersion(0);
+    m_installedAddonsFilter->setExcludeBelowApiVersion(101042);
+    m_installedAddonsFilter->setSortMode("title");
+    m_installedAddonsFilter->setSortOrder(Qt::AscendingOrder);
 
     connect(&m_parsingWatcher, &QFutureWatcher<QList<ModInfo>>::finished, this, &Lexicon::onParsingFinished);
     connect(&m_installedCheckWatcher, &QFutureWatcher<void>::finished, this, &Lexicon::onInstalledAddonsCheckFinished);
@@ -348,6 +350,7 @@ void Lexicon::onParsingFinished() {
     m_addonModel->setCategoryIcons(m_categoryIcons);
 
     populateCategories();
+    refreshCategoryCounts();
 }
 
 void Lexicon::checkInstalledAddons() {
@@ -635,6 +638,11 @@ void Lexicon::populateCategories() {
             info.addonCount = it.value();
             categories.append(info);
         }
+
+        // Sort categories alphabetically
+        std::sort(categories.begin(), categories.end(), [](const CategoryInfo& a, const CategoryInfo& b) {
+            return a.categoryName.compare(b.categoryName, Qt::CaseInsensitive) < 0;
+        });
 
         m_categoryModel->setCategories(categories);
     } catch (const std::exception& e) {

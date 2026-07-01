@@ -31,12 +31,20 @@ Item {
     clip: true
 
     onVisibleChanged: {
-        if (visible && root.lexiconController && searchField.text !== "") {
+        if (visible && root.lexiconController) {
             var filter = root.lexiconController.installedAddonsFilter
-            filter.setSearchText(searchField.text)
+            // Set default sort for browse view: downloads
+            filter.setSortMode("downloads")
+            filter.setSortOrder(Qt.DescendingOrder)
+
+            // Show all addons unless viewing a category
             if (!root.appWindow || !root.appWindow.viewingCategoryAddons) {
                 filter.setShowInstalledOnly(false)
                 filter.setCategoryFilter("")
+            }
+
+            if (searchField.text !== "") {
+                filter.setSearchText(searchField.text)
             }
         }
     }
@@ -274,7 +282,7 @@ Item {
 
                 Switch {
                     id: outdatedToggle
-                    checked: false
+                    checked: true
                     Material.accent: Material.DeepPurple
                     onCheckedChanged: {
                         if (root.lexiconController) {
@@ -387,7 +395,10 @@ Item {
                     onClicked: {
                         root.appWindow.selectedCategoryId = model.categoryId
                         root.appWindow.selectedCategoryName = model.categoryName
-                        root.lexiconController.installedAddonsFilter.setCategoryFilter(model.categoryId)
+                        var filter = root.lexiconController.installedAddonsFilter
+                        filter.setCategoryFilter(model.categoryId)
+                        filter.setSortMode("downloads")
+                        filter.setSortOrder(Qt.DescendingOrder)
                         root.appWindow.viewingCategoryAddons = true
                     }
                 }
