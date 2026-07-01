@@ -106,6 +106,26 @@ ApplicationWindow {
                     font.family: detailWindow.appFontFamily
                     font.pixelSize: 14
                 }
+
+                Text {
+                    text: "View on ESOUI  \u2197"
+                    color: "#8eb5d6"
+                    font.family: detailWindow.appFontFamily
+                    font.pixelSize: 12
+                    font.underline: linkMouse.containsMouse
+                    visible: detailWindow.addonFileInfoUri !== ""
+
+                    MouseArea {
+                        id: linkMouse
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onClicked: {
+                            if (detailWindow.addonFileInfoUri)
+                                Qt.openUrlExternally(detailWindow.addonFileInfoUri)
+                        }
+                    }
+                }
             }
 
             Item { Layout.fillWidth: true }
