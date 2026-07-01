@@ -43,18 +43,13 @@ public:
         return instance;
     }
 
-    QString getPaths();
     const PathCollection& paths() const { return m_paths; }
 
 private:
     static Pathing* instance;
     static QMutex mtx;
 
-    //QString docsPath, addonsPath, appConfigPath, appDataPath;
     PathCollection m_paths;
-
-    bool doesExist(const QString& path);
-    bool isWritable(const QString& path);
 
     Pathing();
     ~Pathing();

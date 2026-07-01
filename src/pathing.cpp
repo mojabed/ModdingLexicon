@@ -24,21 +24,3 @@ Pathing::Pathing() {
 }
 
 Pathing::~Pathing() {}
-
-QString Pathing::getPaths() {
-    return QString("Docs: %1\nAddons: %2\nAppData: %3\nAppConfig: %4")
-        .arg(m_paths.docs, m_paths.addons, m_paths.appData, m_paths.appConfig);
-}
-
-bool Pathing::doesExist(const QString& path) {
-    return QFileInfo::exists(path);
-}
-
-bool Pathing::isWritable(const QString& path) {
-    QFileInfo info(path);
-    if (info.exists()) {
-        return info.isWritable();
-    }
-    // If it doesn't exist, check if its parent directory is writable
-    return QDir(info.absolutePath()).exists() && QFileInfo(info.absolutePath()).isWritable();
-}

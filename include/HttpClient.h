@@ -28,7 +28,6 @@ public:
     ~HttpClient();
 
     Q_INVOKABLE void addDownload(const QUrl& url, const QString& filePath);
-    //void setMaxConcurrentDownloads(int max);
 
     int activeDownloads() const;
 
@@ -36,7 +35,6 @@ signals:
     void downloadProgress(const QString& filePath, qint64 bytesReceived, qint64 bytesTotal);
     void downloadFinished(const QString& filePath);
     void downloadFailed(const QString& filePath, const QString& errorString);
-    void allDownloadsFinished();
     void activeDownloadsChanged();
 
 private slots:

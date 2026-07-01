@@ -124,7 +124,6 @@ void HttpClient::onReplyFinished() {
 
     if (activeDownloads() == 0) {
         m_networkManager->clearConnectionCache();
-        emit allDownloadsFinished();
     }
 }
 

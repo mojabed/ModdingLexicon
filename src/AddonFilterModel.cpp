@@ -12,10 +12,6 @@ AddonFilterModel::AddonFilterModel(QObject* parent)
     connect(this, &QSortFilterProxyModel::sourceModelChanged, this, [this]() {
         sort(0, m_sortOrder);
     });
-
-    m_invalidationTimer.setSingleShot(true);
-    m_invalidationTimer.setInterval(100);
-    connect(&m_invalidationTimer, &QTimer::timeout, this, &AddonFilterModel::flushPendingFilterInvalidation);
 }
 
 void AddonFilterModel::setShowInstalledOnly(bool installed) {
@@ -84,27 +80,6 @@ void AddonFilterModel::setSortOrder(Qt::SortOrder order) {
 
 void AddonFilterModel::refreshFilter() {
     invalidateFilter();
-}
-
-void AddonFilterModel::invalidateCache() {
-    m_cacheValid = false;
-}
-
-void AddonFilterModel::scheduleFilterInvalidation() {
-    if (!m_filterInvalidationPending) {
-        m_filterInvalidationPending = true;
-        m_invalidationTimer.start();
-    }
-}
-
-void AddonFilterModel::flushPendingFilterInvalidation() {
-    m_filterInvalidationPending = false;
-    invalidateCache();
-    invalidateFilter();
-}
-
-void AddonFilterModel::onSourceModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles) {
-    scheduleFilterInvalidation();
 }
 
 bool AddonFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const {

@@ -2,8 +2,6 @@
 
 #include <QSortFilterProxyModel>
 #include <QtQml>
-#include <QSet>
-#include <QTimer>
 
 class AddonFilterModel : public QSortFilterProxyModel {
     Q_OBJECT
@@ -41,10 +39,6 @@ signals:
     void searchTextChanged();
     void sortModeChanged();
 
-private slots:
-    void onSourceModelDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles);
-    void flushPendingFilterInvalidation();
-
 private:
     bool m_showInstalledOnly = false;
     QString m_categoryFilter;
@@ -52,11 +46,4 @@ private:
     QString m_sortMode;
     Qt::SortOrder m_sortOrder = Qt::DescendingOrder;
     int m_excludeBelowApiVersion = 0;
-    mutable QSet<int> m_installedRowsCache;
-    mutable bool m_cacheValid = false;
-    QTimer m_invalidationTimer;
-    bool m_filterInvalidationPending = false;
-
-    void invalidateCache();
-    void scheduleFilterInvalidation();
 };
