@@ -282,7 +282,7 @@ Item {
 
                 Switch {
                     id: outdatedToggle
-                    checked: true
+                    checked: false
                     Material.accent: Material.DeepPurple
                     onCheckedChanged: {
                         if (root.lexiconController) {

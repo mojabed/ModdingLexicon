@@ -34,7 +34,7 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     m_installedAddonsFilter->setSourceModel(m_addonModel);
     m_installedAddonsFilter->setShowInstalledOnly(true);
-    m_installedAddonsFilter->setExcludeBelowApiVersion(101042);
+    m_installedAddonsFilter->setExcludeBelowApiVersion(0);
     m_installedAddonsFilter->setSortMode("title");
     m_installedAddonsFilter->setSortOrder(Qt::AscendingOrder);
 
@@ -192,12 +192,12 @@ void Lexicon::applyGameVersionsToMods() {
 
         auto it = m_gameVersionMap.lowerBound(apiVersion);
         if (it == m_gameVersionMap.end()) {
-            // apiVersion is higher than any known version � use latest
+            // apiVersion is higher than any known version use latest
             --it;
         } else if (it.key() > apiVersion) {
-            // apiVersion falls between entries � step back to next older version
+            // apiVersion falls between entries step back to next older version
             if (it == m_gameVersionMap.begin()) {
-                // apiVersion is older than oldest known � use oldest
+                // apiVersion is older than oldest known use oldest
             } else {
                 --it;
             }
@@ -527,9 +527,6 @@ void Lexicon::checkInstalledAddons() {
                     pathMatch++;
                 }
             }
-
-        spdlog::info("Installed check: {} addons matched (title={} space={} tracked={} path={}) of {} folders",
-                     matchedCount, titleMatch, spaceMatch, trackedMatch, pathMatch, installedDirs.size());
 
         // Update detection: compare API lastUpdate with folder modification time
         int updateCount = 0;
