@@ -213,6 +213,7 @@ ApplicationWindow {
             width: swipeView.width
             height: swipeView.height
             appFontFamily: window.appFontFamily
+            lexiconController: lexicon
         }
     }
     }

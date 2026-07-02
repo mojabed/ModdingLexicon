@@ -24,6 +24,7 @@ class Lexicon : public QObject {
     Q_PROPERTY(QString currentDescription READ currentDescription NOTIFY currentDescriptionChanged)
     Q_PROPERTY(QString gameVersion READ gameVersion NOTIFY gameVersionChanged)
     Q_PROPERTY(QString gameVersionName READ gameVersionName NOTIFY gameVersionChanged)
+    Q_PROPERTY(QString addonsPath READ addonsPath CONSTANT)
 
 public:
     explicit Lexicon(QObject* parent = nullptr);
@@ -41,9 +42,11 @@ public:
     Q_INVOKABLE QString getGameVersionForAddon(const QString& modId) const;
     Q_INVOKABLE int getAddonApiVersion(const QString& modId) const;
     Q_INVOKABLE void refreshCategoryCounts();
+    Q_INVOKABLE void setAddonsPath(const QString& path);
     QString currentDescription() const { return m_currentDescription; }
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }
+    QString addonsPath() const;
 
 signals:
     void masterListReady(const QString& filePath);

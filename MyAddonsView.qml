@@ -8,6 +8,7 @@ Item {
 
     property string appFontFamily: "Segoe UI"
     property var lexiconController
+    property var appWindow
     property bool isSearching: searchField.text !== ""
 
     signal addonDetailRequested(var addonData)
@@ -31,8 +32,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 52
-        color: "#232323"
-        border.color: "#444"
+        color: root.appWindow ? root.appWindow.headerColor : "#232323"
+        border.color: root.appWindow ? root.appWindow.headerBorder : "#444"
         border.width: 1
         z: 2
 
@@ -54,9 +55,9 @@ Item {
                 selectByMouse: true
                 font.family: root.appFontFamily
                 font.pixelSize: 15
-                color: "white"
+                color: root.appWindow ? root.appWindow.headingColor : "white"
                 background: Rectangle {
-                    color: "#2a2a2a"
+                    color: root.appWindow ? root.appWindow.cardColor : "#2a2a2a"
                     radius: 8
                     border.color: "#555"
                     border.width: 1
@@ -72,7 +73,7 @@ Item {
             Text {
                 visible: root.isSearching
                 text: myAddonsList.count + " result" + (myAddonsList.count !== 1 ? "s" : "")
-                color: "white"
+                color: root.appWindow ? root.appWindow.headingColor : "white"
                 font.family: root.appFontFamily
                 font.pixelSize: 16
                 font.bold: true
@@ -97,7 +98,7 @@ Item {
         delegate: Rectangle {
             width: myAddonsList.width - 20
             height: 60
-            color: "#2a2a2a"
+            color: root.appWindow ? root.appWindow.cardColor : "#2a2a2a"
             radius: 6
 
             Rectangle {
@@ -109,10 +110,10 @@ Item {
                     anchors.fill: parent
                     anchors.rightMargin: 50
                     hoverEnabled: true
-                    onEntered: parent.parent.color = "#353535"
-                    onExited: parent.parent.color = "#2a2a2a"
-                    onPressed: parent.parent.color = "#311b44"
-                    onReleased: parent.parent.color = containsMouse ? "#353535" : "#2a2a2a"
+                    onEntered: parent.parent.color = root.appWindow ? root.appWindow.cardHoverColor : "#353535"
+                    onExited: parent.parent.color = root.appWindow ? root.appWindow.cardColor : "#2a2a2a"
+                    onPressed: parent.parent.color = root.appWindow ? root.appWindow.cardPressColor : "#311b44"
+                    onReleased: parent.parent.color = containsMouse ? (root.appWindow ? root.appWindow.cardHoverColor : "#353535") : (root.appWindow ? root.appWindow.cardColor : "#2a2a2a")
                     onClicked: {
                         root.addonDetailRequested({
                             "title": model.title,
@@ -157,7 +158,7 @@ Item {
                     Text {
                         width: parent.width
                         text: model.title || "No data"
-                        color: "white"
+                        color: root.appWindow ? root.appWindow.headingColor : "white"
                         font.family: root.appFontFamily
                         font.pixelSize: 16
                         font.bold: true
@@ -168,7 +169,7 @@ Item {
                     Text {
                         width: parent.width
                         text: model.version || ""
-                        color: "#aaaaaa"
+                        color: root.appWindow ? root.appWindow.subtitleColor : "#aaaaaa"
                         font.family: root.appFontFamily
                         font.pixelSize: 13
                         elide: Text.ElideRight
@@ -179,7 +180,7 @@ Item {
                     Text {
                         width: parent.width
                         text: "by " + (model.author || "")
-                        color: "#aaaaaa"
+                        color: root.appWindow ? root.appWindow.subtitleColor : "#aaaaaa"
                         font.family: root.appFontFamily
                         font.pixelSize: 13
                         elide: Text.ElideRight
@@ -242,17 +243,17 @@ Item {
         width: 340
         modal: true
         standardButtons: Dialog.Yes | Dialog.No
-        Material.theme: Material.Dark
+        Material.accent: Material.DeepPurple
 
         background: Rectangle {
-            color: "#2a2a2a"
+            color: root.appWindow ? root.appWindow.cardColor : "#2a2a2a"
             radius: 8
             border.color: "#555"
         }
 
         contentItem: Text {
             text: "Are you sure you want to uninstall \"" + root.uninstallTargetTitle + "\"?"
-            color: "#cccccc"
+            color: root.appWindow ? root.appWindow.subtitleColor : "#cccccc"
             font.family: root.appFontFamily
             font.pixelSize: 14
             wrapMode: Text.WordWrap

@@ -45,6 +45,8 @@ public:
 
     const PathCollection& paths() const { return m_paths; }
 
+    void setAddonsPath(const QString& path);
+
 private:
     static Pathing* instance;
     static QMutex mtx;

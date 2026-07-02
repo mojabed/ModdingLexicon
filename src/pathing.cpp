@@ -2,6 +2,8 @@
 
 #include <spdlog/spdlog.h>
 #include <QStandardPaths>
+#include <QSettings>
+#include <QDir>
 
 Pathing* Pathing::instance = nullptr;
 QMutex Pathing::mtx;
@@ -14,6 +16,13 @@ Pathing::Pathing() {
     m_paths.appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     m_paths.appConfig = m_paths.appData + "/config";
 
+    // Apply any user-configured override
+    QSettings settings(QStringLiteral("ModdingLexicon"), QStringLiteral("ModdingLexicon"));
+    const QString customAddons = settings.value(QStringLiteral("addonsPath")).toString();
+    if (!customAddons.isEmpty() && QDir(customAddons).exists()) {
+        m_paths.addons = customAddons;
+    }
+
     spdlog::info("Pathing initialized:");
     spdlog::info("  Documents Path: {}", m_paths.docs.toStdString());
     spdlog::info("  Addons Path: {}", m_paths.addons.toStdString());
@@ -22,3 +31,10 @@ Pathing::Pathing() {
 }
 
 Pathing::~Pathing() {}
+
+void Pathing::setAddonsPath(const QString& path) {
+    m_paths.addons = path;
+    QSettings settings(QStringLiteral("ModdingLexicon"), QStringLiteral("ModdingLexicon"));
+    settings.setValue(QStringLiteral("addonsPath"), path);
+    spdlog::info("Addons path changed to: {}", path.toStdString());
+}

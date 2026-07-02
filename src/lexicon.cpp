@@ -1044,3 +1044,13 @@ void Lexicon::fetchAddonDescription(const QString& fileInfoUrl)
     if (m_descriptionFetcher)
         m_descriptionFetcher->fetch(fileInfoUrl);
 }
+
+QString Lexicon::addonsPath() const
+{
+    return Pathing::getInstance()->paths().addons;
+}
+
+void Lexicon::setAddonsPath(const QString& path)
+{
+    Pathing::getInstance()->setAddonsPath(path);
+}
