@@ -22,7 +22,7 @@ Item {
         }
         if (root.lexiconController) {
             root.lexiconController.installedAddonsFilter.setCategoryFilter("")
-            root.lexiconController.installedAddonsFilter.setShowInstalledOnly(true)
+            root.lexiconController.installedAddonsFilter.setShowInstalledOnly(false)
         }
     }
 
@@ -356,12 +356,57 @@ Item {
                     spacing: 8
                     width: parent.width - 20
 
+                    Rectangle {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 48; height: 64
+                        color: "transparent"
+                        visible: model.categoryName === "All"
+
+                        Rectangle {
+                            width: 40; height: 50
+                            anchors.centerIn: parent
+                            radius: 3
+                            color: "#4a3728"
+                            border.color: "#6b5a48"
+                            border.width: 1
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 3
+                                Repeater {
+                                    model: 5
+                                    Rectangle {
+                                        width: 22; height: 2; radius: 1
+                                        color: "#8a7a68"
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                    }
+                                }
+                            }
+                        }
+                        Rectangle {
+                            width: 40; height: 6
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top; anchors.topMargin: 4
+                            radius: 3
+                            color: "#5c4432"
+                            border.color: "#7a6450"; border.width: 1
+                        }
+                        Rectangle {
+                            width: 40; height: 6
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom; anchors.bottomMargin: 4
+                            radius: 3
+                            color: "#5c4432"
+                            border.color: "#7a6450"; border.width: 1
+                        }
+                    }
+
                     Image {
                         anchors.horizontalCenter: parent.horizontalCenter
                         source: model.iconSource
                         asynchronous: true
                         width: 64
                         height: 64
+                        visible: model.categoryName !== "All"
                     }
 
                     Text {

@@ -233,6 +233,11 @@ void Lexicon::refreshCategoryCounts()
         QString catId = m_addonModel->data(idx, AddonModel::CategoryIdRole).toString();
         counts[catId]++;
     }
+    // "All" category count = sum of all individual category counts
+    int allTotal = 0;
+    for (auto it = counts.begin(); it != counts.end(); ++it)
+        allTotal += it.value();
+    counts[QString()] = allTotal;
     m_categoryModel->updateCounts(counts);
 }
 
@@ -685,6 +690,13 @@ void Lexicon::populateCategories() {
         std::sort(categories.begin(), categories.end(), [](const CategoryInfo& a, const CategoryInfo& b) {
             return a.categoryName.compare(b.categoryName, Qt::CaseInsensitive) < 0;
         });
+
+        CategoryInfo allInfo;
+        allInfo.categoryId = QString();
+        allInfo.categoryName = QStringLiteral("All");
+        allInfo.iconSource = iconForCategoryId(QString());
+        allInfo.addonCount = m_mods.count();
+        categories.prepend(allInfo);
 
         m_categoryModel->setCategories(categories);
     } catch (const std::exception& e) {
