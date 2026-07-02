@@ -79,6 +79,29 @@ Item {
                 font.bold: true
                 Layout.alignment: Qt.AlignVCenter
             }
+
+            Button {
+                visible: root.lexiconController && root.lexiconController.availableUpdates > 1
+                text: "Update All (" + (root.lexiconController ? root.lexiconController.availableUpdates : 0) + ")"
+                Layout.preferredHeight: 32
+                Layout.alignment: Qt.AlignVCenter
+                font.family: root.appFontFamily
+                font.pixelSize: 12
+                font.bold: true
+                Material.accent: Material.DeepPurple
+                highlighted: true
+                onClicked: {
+                    if (!root.lexiconController) return
+                    var f = root.lexiconController.installedAddonsFilter
+                    for (var i = 0; i < f.rowCount(); i++) {
+                        var idx = f.index(i, 0)
+                        if (f.data(idx, 0x0114)) {
+                            root.lexiconController.installAddon(
+                                f.data(idx, 0x0101), f.data(idx, 0x0103), f.data(idx, 0x0110))
+                        }
+                    }
+                }
+            }
         }
     }
 

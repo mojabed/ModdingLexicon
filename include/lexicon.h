@@ -24,6 +24,7 @@ class Lexicon : public QObject {
     Q_PROPERTY(QString currentDescription READ currentDescription NOTIFY currentDescriptionChanged)
     Q_PROPERTY(QString gameVersion READ gameVersion NOTIFY gameVersionChanged)
     Q_PROPERTY(QString gameVersionName READ gameVersionName NOTIFY gameVersionChanged)
+    Q_PROPERTY(int availableUpdates READ availableUpdates NOTIFY availableUpdatesChanged)
     Q_PROPERTY(QString addonsPath READ addonsPath CONSTANT)
 
 public:
@@ -47,6 +48,7 @@ public:
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }
     QString addonsPath() const;
+    int availableUpdates() const;
 
 signals:
     void masterListReady(const QString& filePath);
@@ -61,6 +63,7 @@ signals:
     void addonDependencyInstallStarted(const QString& modId, const QString& depTitle);
     void addonInstallStatusChanged(const QString& modId, const QString& status);
     void gameVersionChanged();
+    void availableUpdatesChanged();
 
 private slots:
     void onParsingFinished();
@@ -109,6 +112,7 @@ private:
     DescriptionFetcher* m_descriptionFetcher = nullptr;
     QString m_currentDescription;
     QString m_gameVersion;
-    QString m_gameVersionName;
+    QString m_gameVersionName; 
+    int m_availableUpdates = 0;
     QMap<int, QPair<QString, QString>> m_gameVersionMap; // apiVersion -> (version, name)
 };

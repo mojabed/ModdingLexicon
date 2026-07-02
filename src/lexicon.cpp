@@ -619,6 +619,13 @@ void Lexicon::onInstalledAddonsCheckFinished() {
 
     m_addonModel->setMods(m_mods);
     m_installedAddonsFilter->refreshFilter();
+
+    m_availableUpdates = 0;
+    for (const ModInfo& mod : m_mods) {
+        if (mod.isInstalled && mod.hasUpdate)
+            m_availableUpdates++;
+    }
+    emit availableUpdatesChanged();
 }
 
 void Lexicon::applyCategoryMetadataToMods() {
@@ -1112,7 +1119,6 @@ void Lexicon::trackInstalledFolders(const QString& modId, const QStringList& bef
     }
 
     if (newFolders.isEmpty()) {
-        // For updates, the folders already exist � still record the timestamp
         spdlog::info("trackInstalledFolders: no new folders for mod {} (update)", modId.toStdString());
     } else {
         m_installedFolders[modId] = newFolders;
@@ -1151,4 +1157,9 @@ QString Lexicon::addonsPath() const
 void Lexicon::setAddonsPath(const QString& path)
 {
     Pathing::getInstance()->setAddonsPath(path);
+}
+
+int Lexicon::availableUpdates() const
+{
+    return m_availableUpdates;
 }
