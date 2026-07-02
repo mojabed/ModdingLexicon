@@ -1,1 +1,37 @@
-# ModdingLexicon
+# <p align="center">Modding Lexicon</p>
+
+<p align="center">
+    <b>The right addon manager for everyone</b><br>
+    Find, install, update, and manage your addons in a modern, fast, and easy way.
+</p>
+
+## Features
+
+- **Browse thousands of addons** — search full ESOUI catalog
+- **One-click install / uninstall** — download and extract addons directly
+- **Update detection** — automatically finds outdated addons by comparing API timestamps
+- **Update All** — one button to update every addon that has a new version available
+- <b>**Dependency resolution** — required libraries are installed alongside your addons</b>
+- **My Addons view** — see all installed addons
+- **Hide outdated** — toggle to filter out addons below a minimum API version
+- **Category grid** — browse addons grouped by category
+- **Custom AddOns path** — point the app to a non-default ESO AddOns directory
+- **ESOUI links** — open any addon's ESOUI page directly from the details window
+- **Game version display** — see which game version each addon targets
+
+![My Addons Page](resources/my_addons.png)
+![Category Grid Page](resources/category_grid.png)
+![Category List Page](resources/category_list.png)
+
+## Acknowledgments
+
+- [ESOUI.com](https://www.esoui.com) — addons
+- [MMOUI.com](https://www.mmoui.com) — game config API
+- [Qt Framework](https://www.qt.io) — UI toolkit
+- [spdlog](https://github.com/gabime/spdlog) — logging
+
+---
+
+## License
+
+MIT
