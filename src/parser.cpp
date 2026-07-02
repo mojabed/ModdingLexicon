@@ -70,7 +70,7 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
     if (json["lastUpdate"].isString()) {
         mod.lastUpdate = json["lastUpdate"].toString();
     } else {
-        mod.lastUpdate = QString::number(json["lastUpdate"].toDouble());
+        mod.lastUpdate = QString::number(static_cast<qlonglong>(json["lastUpdate"].toDouble()));
     }
 
     QString sanitizedTitle = mod.title;

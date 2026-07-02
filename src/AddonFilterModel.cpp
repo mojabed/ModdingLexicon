@@ -124,6 +124,12 @@ bool AddonFilterModel::lessThan(const QModelIndex& left, const QModelIndex& righ
     if (!sourceModel())
         return false;
 
+    // Prioritize addons with updates — they float to the top
+    bool leftUpdate = sourceModel()->data(left, AddonModel::HasUpdateRole).toBool();
+    bool rightUpdate = sourceModel()->data(right, AddonModel::HasUpdateRole).toBool();
+    if (leftUpdate != rightUpdate)
+        return leftUpdate;  // left has update, right doesn't → left comes first
+
     int leftVal = 0, rightVal = 0;
 
     if (m_sortMode == QStringLiteral("downloads")) {

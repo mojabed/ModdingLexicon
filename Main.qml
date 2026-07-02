@@ -57,6 +57,7 @@ ApplicationWindow {
             "addonId": data.modId || "",
             "addonDownloadUrl": data.downloadUrl || "",
             "addonGameVersion": data.gameVersion || "",
+            "addonHasUpdate": data.hasUpdate || false,
             "lexiconController": lexicon
         })
 

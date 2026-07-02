@@ -467,7 +467,8 @@ Item {
                             "fileInfoUri": model.fileInfoUri || "",
                             "modId": model.modId || "",
                             "downloadUrl": model.downloadUrl || "",
-                            "gameVersion": model.gameVersion || ""
+                            "gameVersion": model.gameVersion || "",
+                            "hasUpdate": model.hasUpdate || false
                         })
                     }
                 }

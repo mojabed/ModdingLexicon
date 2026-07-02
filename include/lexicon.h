@@ -100,6 +100,7 @@ private:
     QMap<QString, QString> m_categoryNames;
     QMap<QString, QString> m_categoryIcons;
     QMap<QString, QStringList> m_installedFolders;
+    QMap<QString, QString> m_installedChecksums;  // modId -> api checksum at install
     QString m_discontinuedCategoryId;
 
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;

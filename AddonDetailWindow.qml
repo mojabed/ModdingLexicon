@@ -31,6 +31,7 @@ ApplicationWindow {
 
     property string gameVersionLabel: ""
     property bool addonIsOutdated: false
+    property bool addonHasUpdate: false
 
     Timer {
         id: gameVersionPoller
@@ -129,6 +130,53 @@ ApplicationWindow {
             }
 
             Item { Layout.fillWidth: true }
+
+            // Update button
+            Button {
+                visible: detailWindow.addonHasUpdate && !detailWindow.addonIsInstalling
+                Layout.preferredWidth: 120
+                Layout.preferredHeight: 44
+                Layout.alignment: Qt.AlignTop
+
+                font.family: detailWindow.appFontFamily
+                font.pixelSize: 14
+                font.bold: true
+
+                background: Rectangle {
+                    radius: 22
+                    color: updateDetailBtnHover.hovered ? "#4a2e6e" : "#3a1e5e"
+                    border.color: updateDetailBtnHover.hovered ? "#7c4dff" : "#5e35b1"
+                    border.width: 1
+                }
+
+                contentItem: Text {
+                    text: "Update"
+                    color: "#b39ddb"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font: parent.font
+                }
+
+                MouseArea {
+                    id: updateDetailBtnHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (detailWindow.lexiconController) {
+                            detailWindow.addonIsInstalling = true
+                            detailWindow.addonInstallPercent = 0
+                            detailWindow.addonInstallStatus = ""
+                            detailWindow.addonDependencyTitle = ""
+                            detailWindow.lexiconController.installAddon(
+                                detailWindow.addonId,
+                                detailWindow.addonTitle,
+                                detailWindow.addonDownloadUrl
+                            )
+                        }
+                    }
+                }
+            }
 
             Button {
                 id: installButton
@@ -369,6 +417,7 @@ ApplicationWindow {
                 detailWindow.addonInstallStatus = ""
                 detailWindow.addonDependencyTitle = ""
                 detailWindow.addonIsInstalled = true
+                detailWindow.addonHasUpdate = false
             }
         }
 

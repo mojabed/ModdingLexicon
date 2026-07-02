@@ -131,7 +131,8 @@ Item {
                             "fileInfoUri": model.fileInfoUri || "",
                             "modId": model.modId || "",
                             "downloadUrl": model.downloadUrl || "",
-                            "gameVersion": model.gameVersion || ""
+                            "gameVersion": model.gameVersion || "",
+                            "hasUpdate": model.hasUpdate || false
                         })
                     }
                 }
@@ -151,7 +152,7 @@ Item {
                 }
 
                 Column {
-                    width: Math.max(0, parent.width - 48 - 42)
+                    width: Math.max(0, parent.width - 48 - 110)
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 1
 
@@ -188,8 +189,33 @@ Item {
                     }
                 }
 
-                Item { width: 6 }
+                // Update button
+                Text {
+                    id: updateBtn
+                    text: "Update"
+                    color: updMouse.containsMouse ? "#b39ddb" : "#666666"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 12
+                    font.bold: true
+                    visible: model.hasUpdate || false
+                    anchors.verticalCenter: parent.verticalCenter
 
+                    MouseArea {
+                        id: updMouse
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (root.lexiconController)
+                                root.lexiconController.installAddon(model.modId, model.title, model.downloadUrl)
+                        }
+                    }
+                }
+
+                Item { width: 6; height: 1 }
+
+                // Uninstall button
                 Rectangle {
                     width: 32
                     height: 32
