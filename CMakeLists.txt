@@ -103,6 +103,12 @@ target_link_libraries(appModdingLexicon
     spdlog::spdlog
 )
 
+if(MSVC)
+    message(STATUS "MSVC version (internal): ${MSVC_VERSION}")
+    message(STATUS "MSVC toolset version:  ${MSVC_TOOLSET_VERSION}")
+    message(STATUS "Full Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
+endif()
+
 # Auto deploy Qt DLLs
 if(WIN32)
     find_program(WINDEPLOYQT_EXECUTABLE windeployqt

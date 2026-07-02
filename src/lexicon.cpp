@@ -681,7 +681,7 @@ void Lexicon::populateCategories() {
             info.categoryName = finalName;
             info.iconSource = m_categoryIcons.contains(it.key())
                 ? m_categoryIcons.value(it.key())
-                : iconForCategoryId(it.key());
+                : QString();
             info.addonCount = it.value();
             categories.append(info);
         }
@@ -694,7 +694,7 @@ void Lexicon::populateCategories() {
         CategoryInfo allInfo;
         allInfo.categoryId = QString();
         allInfo.categoryName = QStringLiteral("All");
-        allInfo.iconSource = iconForCategoryId(QString());
+        allInfo.iconSource = QString();
         allInfo.addonCount = m_mods.count();
         categories.prepend(allInfo);
 

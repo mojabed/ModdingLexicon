@@ -64,7 +64,7 @@ QVariant AddonModel::data(const QModelIndex& index, int role) const {
         if (!mod.categoryId.isEmpty() && m_categoryIcons.contains(mod.categoryId)) {
             return m_categoryIcons.value(mod.categoryId);
         }
-        return iconForCategoryId(mod.categoryId);
+        return QString();
     case ApiVersionRole:
         return mod.maxApiVersion;
     case GameVersionRole:
