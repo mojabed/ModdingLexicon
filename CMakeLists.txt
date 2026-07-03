@@ -39,7 +39,7 @@ set(PROJECT_HEADERS
 
 set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/resources/lexicon.rc")
 
-qt_add_executable(appModdingLexicon
+qt_add_executable(ModdingLexicon
     main.cpp
     ${PROJECT_SOURCES}
     ${PROJECT_HEADERS}
@@ -47,7 +47,7 @@ qt_add_executable(appModdingLexicon
     ${app_icon_resource_windows}
 )
 
-qt_add_qml_module(appModdingLexicon
+qt_add_qml_module(ModdingLexicon
     URI ModdingLexicon
     VERSION 1.0
     QML_FILES
@@ -71,29 +71,29 @@ qt_add_qml_module(appModdingLexicon
     DEPENDENCIES QtQuick QtWebEngineQuick
 )
 
-target_include_directories(appModdingLexicon
+target_include_directories(ModdingLexicon
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_compile_options(appModdingLexicon PRIVATE /EHsc)
+target_compile_options(ModdingLexicon PRIVATE /EHsc)
 
-target_compile_definitions(appModdingLexicon PRIVATE
+target_compile_definitions(ModdingLexicon PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:_SILENCE_CLANG_COROUTINE_MESSAGE>
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
-set_target_properties(appModdingLexicon PROPERTIES
-#    MACOSX_BUNDLE_GUI_IDENTIFIER com.example.appModdingLexicon
+set_target_properties(ModdingLexicon PROPERTIES
+#    MACOSX_BUNDLE_GUI_IDENTIFIER com.example.ModdingLexicon
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
 
-target_link_libraries(appModdingLexicon
+target_link_libraries(ModdingLexicon
     PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
@@ -115,17 +115,17 @@ if(WIN32)
         HINTS "${QT6_INSTALL_PREFIX}/bin"
     )
     if(WINDEPLOYQT_EXECUTABLE)
-        add_custom_command(TARGET appModdingLexicon POST_BUILD
+        add_custom_command(TARGET ModdingLexicon POST_BUILD
             COMMAND "${WINDEPLOYQT_EXECUTABLE}"
                 --qmldir "${CMAKE_CURRENT_SOURCE_DIR}"
-                "$<TARGET_FILE:appModdingLexicon>"
+                "$<TARGET_FILE:ModdingLexicon>"
             COMMENT "Deploying Qt runtime dependencies..."
         )
     endif()
 endif()
 
 include(GNUInstallDirs)
-install(TARGETS appModdingLexicon
+install(TARGETS ModdingLexicon
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
