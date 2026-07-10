@@ -62,3 +62,4 @@ compile_commands.json
 /out/build/release
 /out/build
 /installer/ModdingLexicon-Setup-1.0.exe
+/tests/build
