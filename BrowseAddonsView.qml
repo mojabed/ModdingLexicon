@@ -33,11 +33,9 @@ Item {
     onVisibleChanged: {
         if (visible && root.lexiconController) {
             var filter = root.lexiconController.installedAddonsFilter
-            // Set default sort for browse view: downloads
             filter.setSortMode("downloads")
             filter.setSortOrder(Qt.DescendingOrder)
 
-            // Show all addons unless viewing a category
             if (!root.appWindow || !root.appWindow.viewingCategoryAddons) {
                 filter.setShowInstalledOnly(false)
                 filter.setCategoryFilter("")
@@ -125,11 +123,9 @@ Item {
                         filter.setSearchText(text)
 
                         if (text !== "" && !root.appWindow.viewingCategoryAddons) {
-                            // Searching from grid: show all addons, clear category filter
                             filter.setShowInstalledOnly(false)
                             filter.setCategoryFilter("")
                         } else if (text === "" && !root.appWindow.viewingCategoryAddons) {
-                            // Search cleared, back to grid
                             filter.setShowInstalledOnly(true)
                             filter.setCategoryFilter("")
                         }

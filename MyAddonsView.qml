@@ -102,6 +102,185 @@ Item {
                     }
                 }
             }
+
+            // Clean libraries button
+            Button {
+                id: cleanBtn
+                Layout.preferredHeight: 32
+                Layout.alignment: Qt.AlignVCenter
+                font.family: root.appFontFamily
+                font.pixelSize: 12
+                font.bold: true
+                Material.accent: Material.DeepPurple
+                highlighted: true
+                text: "Clean"
+                onClicked: cleanDialog.open()
+            }
+        }
+    }
+
+    // Clean libraries dialog
+    Dialog {
+        id: cleanDialog
+        title: "Clean Unused Libraries"
+        anchors.centerIn: parent
+        width: 420
+        modal: true
+        closePolicy: Popup.NoAutoClose
+        Material.accent: Material.DeepPurple
+
+        property int cleanedCount: 0
+        property bool cleaningInProgress: false
+        property bool cleaningDone: false
+
+        background: Rectangle {
+            color: "#232323"; radius: 8; border.color: "#444"; border.width: 1
+        }
+
+        header: Text {
+            text: cleanDialog.title
+            color: "white"
+            font.family: root.appFontFamily
+            font.pixelSize: 16
+            font.bold: true
+            leftPadding: 20; topPadding: 16; bottomPadding: 8
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 16
+            width: parent ? parent.width - 40 : 380
+
+            Text {
+                visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone
+                text: "Cleaning will remove libraries not currently being used by any installed addon."
+                color: "#aaaaaa"
+                font.family: root.appFontFamily
+                font.pixelSize: 13
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            Text {
+                visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone
+                text: "Are you sure you want to uninstall unused libraries?"
+                color: "white"
+                font.family: root.appFontFamily
+                font.pixelSize: 14
+                font.bold: true
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            ColumnLayout {
+                visible: cleanDialog.cleaningInProgress
+                spacing: 6
+                Layout.fillWidth: true
+
+                Text {
+                    text: "Removing unused libraries..."
+                    color: "#aaaaaa"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 13
+                }
+
+                ProgressBar {
+                    id: cleanProgressBar
+                    from: 0; to: 1; value: 0
+                    Layout.fillWidth: true
+                    Material.accent: Material.DeepPurple
+                }
+
+                Text {
+                    text: cleanProgressLabel.text
+                    color: "#888888"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 12
+                }
+
+                Text {
+                    id: cleanProgressLabel
+                    text: ""
+                }
+            }
+
+            ColumnLayout {
+                visible: cleanDialog.cleaningDone
+                spacing: 8
+                Layout.fillWidth: true
+
+                Text {
+                    text: cleanDialog.cleanedCount + " libraries removed successfully."
+                    color: "#90EE90"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 14
+                    font.bold: true
+                }
+            }
+
+            // Buttons
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignRight
+                spacing: 10
+
+                // Yes / No
+                Button {
+                    visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone
+                    text: "Yes"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 13
+                    Material.accent: Material.DeepPurple
+                    highlighted: true
+                    onClicked: {
+                        cleanDialog.cleaningInProgress = true
+                        root.lexiconController.cleanUnusedLibraries()
+                    }
+                }
+                Button {
+                    visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone
+                    text: "No"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 13
+                    onClicked: cleanDialog.close()
+                }
+
+                // Done button
+                Button {
+                    visible: cleanDialog.cleaningDone
+                    text: "Done"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 13
+                    Material.accent: Material.DeepPurple
+                    highlighted: true
+                    onClicked: {
+                        cleanDialog.cleaningDone = false
+                        cleanDialog.cleaningInProgress = false
+                        cleanDialog.close()
+                    }
+                }
+            }
+        }
+
+        onClosed: {
+            cleanDialog.cleaningInProgress = false
+            cleanDialog.cleaningDone = false
+            cleanProgressBar.value = 0
+            cleanProgressLabel.text = ""
+        }
+    }
+
+    Connections {
+        target: root.lexiconController
+        function onCleanLibrariesProgress(current, total, libTitle) {
+            cleanProgressBar.to = total
+            cleanProgressBar.value = current
+            cleanProgressLabel.text = "(" + current + "/" + total + ") " + libTitle
+        }
+        function onCleanLibrariesFinished(count) {
+            cleanProgressBar.value = cleanProgressBar.to
+            cleanDialog.cleaningInProgress = false
+            cleanDialog.cleaningDone = true
+            cleanDialog.cleanedCount = count
         }
     }
 

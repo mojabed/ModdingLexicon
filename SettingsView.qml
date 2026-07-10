@@ -34,7 +34,6 @@ Item {
             anchors.topMargin: 24
             spacing: 24
 
-            // ── Addons Directory ──
             GroupBox {
                 title: "Addons Directory"
                 Layout.fillWidth: true

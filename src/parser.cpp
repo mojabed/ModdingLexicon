@@ -77,7 +77,6 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
     sanitizedTitle.remove(' ');
 
     // Build CDN download URL: https://cdn.esoui.com/downloads/file<id>/<timestamp>-<title>.zip
-    // lastUpdate may be in seconds or milliseconds; normalize to seconds
     bool isTsNumber = false;
     long long ts = mod.lastUpdate.toLongLong(&isTsNumber);
     if (isTsNumber && ts > 9999999999LL) {
@@ -105,11 +104,9 @@ ModInfo Parser::fromEsoJson(const QJsonObject& json) {
                 dependency.apiVersion = addonObj["apiVersion"].toString();
                 dependency.library = addonObj.contains("library") ? addonObj["library"].toBool() : false;
 
-                // Track max apiVersion at the mod level
                 int api = 0;
                 QString apiStr = addonObj["apiVersion"].toString();
                 if (!apiStr.isEmpty()) {
-                    // Handles "101046 101047" (space-separated) or single value
                     const QStringList parts = apiStr.split(' ', Qt::SkipEmptyParts);
                     for (const QString& part : parts) {
                         bool ok = false;

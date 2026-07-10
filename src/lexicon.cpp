@@ -71,19 +71,16 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
     m_gameConfigPath = appData + "/gameconfig.json";
     m_installedFoldersPath = appData + "/installed_folders.json";
 
-    // Defaults in case gameconfig.json hasn't loaded yet
     m_gameVersion = "12.0.0";
     m_gameVersionName = "Season Zero Pt.2";
 
     loadInstalledFolders();
 
-    // Try loading cached gameconfig first, then update
     parseGameConfig();
     updateGameConfig();
     updateCategoryList();
     updateMasterList();
 
-    // Deferred: prune stale image cache on startup
     QTimer::singleShot(5000, this, [this]() {
         m_descriptionFetcher->pruneImageCache(
             Pathing::getInstance()->paths().appData + "/image_cache");
@@ -112,7 +109,6 @@ void Lexicon::updateGameConfig() {
 void Lexicon::parseGameConfig() {
     QMap<int, QPair<QString, QString>> newMap;
 
-    // Try loading from cached file
     QFile file(m_gameConfigPath);
     if (file.open(QIODevice::ReadOnly)) {
         QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
@@ -130,9 +126,8 @@ void Lexicon::parseGameConfig() {
         }
     }
 
-    // Fallback to hardcoded map if file didn't yield usable data
     if (newMap.isEmpty()) {
-        if (!m_gameVersionMap.isEmpty()) return; // Already have data, keep it
+        if (!m_gameVersionMap.isEmpty()) return;
         spdlog::warn("parseGameConfig: using hardcoded fallback map");
         newMap[101050] = qMakePair(QString("12.0.0"), QString("Season Zero Pt.2"));
         newMap[101049] = qMakePair(QString("11.3.0"), QString("Season Zero"));
@@ -156,15 +151,12 @@ void Lexicon::parseGameConfig() {
         newMap[100012] = qMakePair(QString("1.0.0"), QString("Live"));
     }
 
-    if (newMap == m_gameVersionMap) return; // No change
+    if (newMap == m_gameVersionMap) return;
 
     m_gameVersionMap = newMap;
     auto lastIt = m_gameVersionMap.end(); --lastIt;
     m_gameVersion = lastIt.value().first;
     m_gameVersionName = lastIt.value().second;
-
-    spdlog::info("Loaded {} game versions; latest: {} ({})",
-                 m_gameVersionMap.size(), m_gameVersionName.toStdString(), m_gameVersion.toStdString());
 
     applyGameVersionsToMods();
     if (!m_mods.isEmpty() && m_addonModel) {
@@ -192,12 +184,9 @@ void Lexicon::applyGameVersionsToMods() {
 
         auto it = m_gameVersionMap.lowerBound(apiVersion);
         if (it == m_gameVersionMap.end()) {
-            // apiVersion is higher than any known version use latest
             --it;
         } else if (it.key() > apiVersion) {
-            // apiVersion falls between entries step back to next older version
             if (it == m_gameVersionMap.begin()) {
-                // apiVersion is older than oldest known use oldest
             } else {
                 --it;
             }
@@ -233,7 +222,6 @@ void Lexicon::refreshCategoryCounts()
         QString catId = m_addonModel->data(idx, AddonModel::CategoryIdRole).toString();
         counts[catId]++;
     }
-    // "All" category count = sum of all individual category counts
     int allTotal = 0;
     for (auto it = counts.begin(); it != counts.end(); ++it)
         allTotal += it.value();
@@ -259,7 +247,7 @@ QString Lexicon::getGameVersionForAddon(const QString& modId) const
             break;
         }
     }
-    // Fallback: latest game version
+
     if (!m_gameVersionName.isEmpty())
         return m_gameVersionName + " (" + m_gameVersion + ")";
     return QString();
@@ -379,8 +367,6 @@ void Lexicon::checkInstalledAddons() {
             installedDirs.append(dir);
         }
 
-        spdlog::info("Found {} installed addon directories", installedDirs.size());
-
         QSet<QString> installedDirsSet;
         installedDirsSet.reserve(installedDirs.size());
         for (const QString& dir : installedDirs) {
@@ -412,7 +398,6 @@ void Lexicon::checkInstalledAddons() {
             normalizedTitle.remove(' ');
             normalizedTitle.remove('\'');
 
-            // Also strip version numbers for matching
             QString strippedTitle = normalizedTitle;
             strippedTitle.remove(QRegularExpression("[\\d.]+$"));
 
@@ -533,7 +518,6 @@ void Lexicon::checkInstalledAddons() {
                 }
             }
 
-        // Update detection: compare API lastUpdate with folder modification time
         int updateCount = 0;
         for (ModInfo& mod : m_mods) {
             mod.hasUpdate = false;
@@ -555,8 +539,6 @@ void Lexicon::checkInstalledAddons() {
                 updateCount++;
             }
         }
-        if (updateCount > 0)
-            spdlog::info("Update check: {} addon(s) have newer API than disk", updateCount);
 
         if (matchedCount < installedDirs.size()) {
             QStringList unmatched;
@@ -589,12 +571,6 @@ void Lexicon::checkInstalledAddons() {
                         }
                     }
                 }
-                if (!claimants.isEmpty()) {
-                    spdlog::info("  unmatched folder: '{}' claimed by {} mod(s): {}", 
-                                 dir.toStdString(), claimants.size(), claimants.join(", ").toStdString());
-                } else {
-                    spdlog::info("  unmatched folder: '{}' (no known mod claims this)", dir.toStdString());
-                }
             }
         }
 
@@ -604,7 +580,6 @@ void Lexicon::checkInstalledAddons() {
 }
 
 void Lexicon::onInstalledAddonsCheckFinished() {
-    // Seed checksums for existing installs
     int seeded = 0;
     bool needSave = false;
     for (const ModInfo& mod : m_mods) {
@@ -614,8 +589,7 @@ void Lexicon::onInstalledAddonsCheckFinished() {
             seeded++;
         }
     }
-    if (seeded > 0)
-        spdlog::info("Seeded checksums for {} addon(s)", seeded);
+
     if (needSave)
         saveInstalledFolders();
 
@@ -711,7 +685,6 @@ void Lexicon::downloadAndExtractAddon(const QString& modId, const QString& title
     const QString addonsPath = Pathing::getInstance()->paths().addons;
     const QString tempFilePath = QDir::tempPath() + QStringLiteral("/moddinglexicon_%1.zip").arg(modId);
 
-    spdlog::info("installAddon: downloading {} to {}", downloadUrl.toStdString(), tempFilePath.toStdString());
     emit addonInstallStarted(modId);
 
     auto* manager = new QNetworkAccessManager(this);
@@ -751,8 +724,6 @@ void Lexicon::downloadAndExtractAddon(const QString& modId, const QString& title
         file.write(reply->readAll());
         file.close();
 
-        spdlog::info("installAddon: downloaded zip to {}, extracting...", tempFilePath.toStdString());
-
         QDir addonsDir(addonsPath);
         const QStringList beforeDirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 
@@ -770,8 +741,6 @@ void Lexicon::downloadAndExtractAddon(const QString& modId, const QString& title
                         onDone(false, QStringLiteral("Extraction failed: ") + err);
                         return;
                     }
-
-                    spdlog::info("installAddon: extraction complete for {}", modId.toStdString());
 
                     QDir dir(addonsPath);
                     const QStringList afterDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
@@ -883,7 +852,6 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
 
     emit addonInstallStatusChanged(modId, QStringLiteral("installing_dependencies"));
 
-    // Install sequentially using index-based recursion
     auto sharedIdx = std::make_shared<int>(0);
     auto sharedList = std::make_shared<QList<DepEntry>>(toInstall);
     auto installNext = std::make_shared<std::function<void()>>();
@@ -958,7 +926,6 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         QDir addonsDir(addonsPath);
         for (const QString& folder : folders) {
             const QString fullPath = addonsDir.filePath(folder);
-            spdlog::info("uninstallAddon: removing {}", fullPath.toStdString());
             QDir(fullPath).removeRecursively();
         }
         emit addonUninstallFinished(modId);
@@ -980,7 +947,6 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
 
     const QStringList dirs = addonsDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 
-    // Try addons[0].path first (the folder name the mod creates)
     if (mod && !mod->addons.isEmpty()) {
         QString pathName = mod->addons[0].path;
         pathName.remove('\'');
@@ -989,7 +955,6 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
             d.remove('\'');
             if (d.compare(pathName, Qt::CaseInsensitive) == 0) {
                 const QString fullPath = addonsDir.filePath(dir);
-                spdlog::info("uninstallAddon: removing {} (path match)", fullPath.toStdString());
                 QDir(fullPath).removeRecursively();
                 m_installedChecksums.remove(modId);
                 saveInstalledFolders();
@@ -1000,7 +965,6 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         }
     }
 
-    // Try title matching
     const QString lowerTitle = title.toLower();
     const QString lowerTitleNoSpaces = QString(lowerTitle).remove(' ').remove('\'');
     QString strippedTitle = lowerTitleNoSpaces;
@@ -1010,7 +974,6 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         QString lowerDir = dir.toLower();
         if (lowerDir == lowerTitle || lowerDir == lowerTitleNoSpaces || lowerDir == strippedTitle) {
             const QString fullPath = addonsDir.filePath(dir);
-            spdlog::info("uninstallAddon: removing {} (title match)", fullPath.toStdString());
             QDir(fullPath).removeRecursively();
             m_installedChecksums.remove(modId);
             saveInstalledFolders();
@@ -1023,7 +986,6 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         lowerDirNoSpaces.remove('\'');
         if (lowerDirNoSpaces == lowerTitleNoSpaces || lowerDirNoSpaces == strippedTitle) {
             const QString fullPath = addonsDir.filePath(dir);
-            spdlog::info("uninstallAddon: removing {} (title match, no spaces)", fullPath.toStdString());
             QDir(fullPath).removeRecursively();
             m_installedChecksums.remove(modId);
             saveInstalledFolders();
@@ -1039,6 +1001,60 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
 void Lexicon::refreshInstalledStatus()
 {
     checkInstalledAddons();
+}
+
+void Lexicon::cleanUnusedLibraries()
+{
+    const QString addonsPath = Pathing::getInstance()->paths().addons;
+    if (addonsPath.isEmpty()) { return; }
+
+    struct LibInfo { QString id; QString title; };
+    QList<LibInfo> installedLibs;
+    for (const ModInfo& mod : m_mods) {
+        if (!mod.isInstalled) continue;
+        if (mod.title.startsWith(QStringLiteral("Lib"), Qt::CaseInsensitive) || mod.library)
+            installedLibs.append({mod.id, mod.title});
+    }
+    if (installedLibs.isEmpty()) { emit cleanLibrariesFinished(0); return; }
+
+    QSet<QString> neededLibs;
+    for (const ModInfo& mod : m_mods) {
+        if (!mod.isInstalled) continue;
+        for (const Dependencies& dep : mod.addons) {
+            for (const QString& raw : dep.requiredDependencies)
+                neededLibs.insert(raw.trimmed().toLower());
+            for (const QString& raw : dep.optionalDependencies)
+                neededLibs.insert(raw.trimmed().toLower());
+        }
+    }
+
+    QList<LibInfo> unusedLibs;
+    for (const LibInfo& lib : installedLibs) {
+        const QString lt = lib.title.toLower(), ltns = QString(lt).remove(' ');
+        bool needed = false;
+        for (const QString& n : neededLibs) {
+            if (lt == n || ltns == QString(n).remove(' ') || lt.contains(n)) { needed = true; break; }
+        }
+        if (!needed) unusedLibs.append(lib);
+    }
+    if (unusedLibs.isEmpty()) { emit cleanLibrariesFinished(0); return; }
+
+    QDir addonsDir(addonsPath);
+    for (int i = 0; i < unusedLibs.size(); ++i) {
+        const LibInfo& lib = unusedLibs[i];
+        emit cleanLibrariesProgress(i + 1, unusedLibs.size(), lib.title);
+
+        if (m_installedFolders.contains(lib.id)) {
+            for (const QString& folder : m_installedFolders.take(lib.id))
+                QDir(addonsDir.filePath(folder)).removeRecursively();
+            m_installedChecksums.remove(lib.id);
+        } else {
+            uninstallAddon(lib.id, lib.title);
+        }
+    }
+    saveInstalledFolders();
+    refreshInstalledStatus();
+    emit cleanLibrariesFinished(unusedLibs.size());
 }
 
 void Lexicon::loadInstalledFolders()
@@ -1057,7 +1073,7 @@ void Lexicon::loadInstalledFolders()
     for (auto it = root.begin(); it != root.end(); ++it) {
         const QJsonValue val = it.value();
         if (val.isObject()) {
-            // New format: { "f": [...], "t": "..." }
+            // format: { "f": [...], "t": "..." }
             const QJsonObject obj = val.toObject();
             const QJsonArray arr = obj["f"].toArray();
             QStringList folders;
@@ -1066,14 +1082,12 @@ void Lexicon::loadInstalledFolders()
                 folders.append(v.toString());
             if (!folders.isEmpty())
                 m_installedFolders[it.key()] = folders;
-            // Read checksum (new "c" key, or fallback to old "t"/"v" for migration)
             QString ck = obj["c"].toString();
             if (ck.isEmpty()) ck = obj["t"].toString();
             if (ck.isEmpty()) ck = obj["v"].toString();
             if (!ck.isEmpty())
                 m_installedChecksums[it.key()] = ck;
         } else if (val.isArray()) {
-            // Old format: just an array of folder names
             const QJsonArray arr = val.toArray();
             QStringList folders;
             folders.reserve(arr.size());
@@ -1099,7 +1113,6 @@ void Lexicon::saveInstalledFolders()
         root[it.key()] = obj;
     }
 
-    // Also save checksums for mods without tracked folders
     for (auto it = m_installedChecksums.begin(); it != m_installedChecksums.end(); ++it) {
         if (!root.contains(it.key())) {
             QJsonObject obj;
@@ -1143,7 +1156,6 @@ void Lexicon::trackInstalledFolders(const QString& modId, const QStringList& bef
 
     saveInstalledFolders();
 
-    // Immediately refresh model so update button disappears
     for (ModInfo& mod : m_mods) {
         if (mod.id == modId)
             mod.hasUpdate = false;

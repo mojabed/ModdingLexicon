@@ -58,10 +58,6 @@ void HttpClient::processDownloadQueue() {
 }
 
 void HttpClient::startDownload(const Download& download) {
-    spdlog::info("HttpClient: Starting download of {} to {}", 
-                 download.url.toString().toStdString(), 
-                 download.filePath.toStdString());
-                 
     QNetworkRequest request = createRequest(download.url);
     QNetworkReply* reply = m_networkManager->get(request);
 

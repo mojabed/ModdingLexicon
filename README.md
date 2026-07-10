@@ -8,14 +8,8 @@
 ## Features
 
 - **Browse thousands of addons** — search full ESOUI catalog
-- **One-click install / uninstall** — download and extract addons directly
-- **Update detection** — automatically finds outdated addons by comparing API timestamps
-- **Update All** — one button to update every addon that has a new version available
-- <b>**Dependency resolution** — required libraries are installed alongside your addons</b>
-- **My Addons view** — see all installed addons
-- **Hide outdated** — toggle to filter out addons below a minimum API version
-- **Category grid** — browse addons grouped by category
-- **Custom AddOns path** — point the app to a non-default ESO AddOns directory
+- **Dependency resolution** — required libraries are installed alongside your addons
+- **Clean libraries** - no more cluttered addons folder with unused libraries
 - **ESOUI links** — open any addon's ESOUI page directly from the details window
 - **Game version display** — see which game version each addon targets
 

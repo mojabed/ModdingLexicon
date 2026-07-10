@@ -58,7 +58,6 @@ void DescriptionFetcher::fetch(const QString& fileInfoUrl)
 
                 QString desc = extractDescription(html);
 
-                // Only extract images from the two relevant container classes
                 QString postmessageHtml = extractDivByClass(html, QStringLiteral("postmessage"));
                 QString fileinfoPicsHtml = extractDivByClass(html, QStringLiteral("fileinfo-pics"));
                 QString combinedImagesHtml = postmessageHtml + fileinfoPicsHtml;
@@ -114,13 +113,10 @@ void DescriptionFetcher::fetch(const QString& fileInfoUrl)
                     QRegularExpression::CaseInsensitiveOption);
                 desc.remove(resourceTags);
 
-                // Text only description immediately
                 QMetaObject::invokeMethod(self, [self, desc, fileInfoUrl, imagePairs]() {
                     if (!self)
                         return;
                     emit self->descriptionReady(fileInfoUrl, desc);
-
-                    // Load images in background
                     if (!imagePairs.isEmpty())
                         self->lazyLoadImages(fileInfoUrl, desc, imagePairs);
                 }, Qt::QueuedConnection);
@@ -154,7 +150,7 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
     static QHash<QString, QString> s_memCache;
 
     struct DownloadCtx {
-        QMap<QString, QPair<QString, QString>> urlToPath; // thumbUrl -> (thumbLocal, fullLocal)
+        QMap<QString, QPair<QString, QString>> urlToPath;
         int pending = 0;
         QString description;
         QString fileInfoUrl;
@@ -199,7 +195,7 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
                     fullLocalPath = fullCachedPath;
                     s_memCache[resolvedFull.toString()] = fullCachedPath;
                 } else {
-                    continue; // full size images not ready yet
+                    continue;
                 }
             }
 
@@ -227,7 +223,7 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
             return false;
 
         if (s_memCache.contains(resolved.toString()))
-            return true; // already in cache, caller should use s_memCache
+            return true;
 
         if (QFile::exists(cachedPath)) {
             s_memCache[resolved.toString()] = cachedPath;
@@ -265,7 +261,7 @@ void DescriptionFetcher::lazyLoadImages(const QString& fileInfoUrl,
                 if (ctx->pending == 0 && ctx->self)
                     emitDescription();
             });
-        return false; // downloading
+        return false;
     };
 
     for (const auto& pair : imagePairs) {

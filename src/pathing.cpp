@@ -12,11 +12,10 @@ Pathing::Pathing() {
     // Paths for Elder Scrolls Online
     m_paths.docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
     m_paths.addons = m_paths.docs + "/Elder Scrolls Online/live/AddOns";
-    // Paths for Modding Lexicon 
+
     m_paths.appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     m_paths.appConfig = m_paths.appData + "/config";
 
-    // Apply any user-configured override
     QSettings settings(QStringLiteral("ModdingLexicon"), QStringLiteral("ModdingLexicon"));
     const QString customAddons = settings.value(QStringLiteral("addonsPath")).toString();
     if (!customAddons.isEmpty() && QDir(customAddons).exists()) {

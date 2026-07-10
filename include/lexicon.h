@@ -44,6 +44,7 @@ public:
     Q_INVOKABLE int getAddonApiVersion(const QString& modId) const;
     Q_INVOKABLE void refreshCategoryCounts();
     Q_INVOKABLE void setAddonsPath(const QString& path);
+    Q_INVOKABLE void cleanUnusedLibraries();
     QString currentDescription() const { return m_currentDescription; }
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }
@@ -64,6 +65,8 @@ signals:
     void addonInstallStatusChanged(const QString& modId, const QString& status);
     void gameVersionChanged();
     void availableUpdatesChanged();
+    void cleanLibrariesProgress(int current, int total, const QString& libTitle);
+    void cleanLibrariesFinished(int count);
 
 private slots:
     void onParsingFinished();
@@ -103,7 +106,7 @@ private:
     QMap<QString, QString> m_categoryNames;
     QMap<QString, QString> m_categoryIcons;
     QMap<QString, QStringList> m_installedFolders;
-    QMap<QString, QString> m_installedChecksums;  // modId -> api checksum at install
+    QMap<QString, QString> m_installedChecksums;
     QString m_discontinuedCategoryId;
 
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;
