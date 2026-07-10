@@ -52,9 +52,6 @@ public:
     int availableUpdates() const;
 
 signals:
-    void masterListReady(const QString& filePath);
-    void downloadError(const QString& message);
-    void addonDescriptionReady(const QString& url, const QString& description);
     void currentDescriptionChanged();
     void addonInstallStarted(const QString& modId);
     void addonInstallProgress(const QString& modId, int percent);
@@ -106,7 +103,7 @@ private:
     QMap<QString, QString> m_categoryNames;
     QMap<QString, QString> m_categoryIcons;
     QMap<QString, QStringList> m_installedFolders;
-    QMap<QString, QString> m_installedChecksums;
+    QMap<QString, QString> m_installedVersions;
     QString m_discontinuedCategoryId;
 
     QFutureWatcher<QList<ModInfo>> m_parsingWatcher;

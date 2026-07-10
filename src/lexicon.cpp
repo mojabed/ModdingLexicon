@@ -43,7 +43,6 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     connect(m_httpClient, &HttpClient::downloadFinished, this, [this](const QString& filePath) {
         if (filePath == m_masterListPath) {
-            emit masterListReady(filePath);
             parseMasterList();
         } else if (filePath == m_categoryListPath) {
             parseCategoryList();
@@ -54,14 +53,12 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
 
     connect(m_httpClient, &HttpClient::downloadFailed, this, [this](const QString& path, const QString& error) {
         spdlog::error("Failed to update master list: {}", error.toStdString());
-        emit downloadError(error);
     });
 
     connect(m_descriptionFetcher, &DescriptionFetcher::descriptionReady,
             this, [this](const QString& url, const QString& desc) {
                 m_currentDescription = desc;
                 emit currentDescriptionChanged();
-                emit addonDescriptionReady(url, desc);
             });
 
     QString appData = Pathing::getInstance()->paths().appData;
@@ -521,24 +518,22 @@ void Lexicon::checkInstalledAddons() {
         int updateCount = 0;
         for (ModInfo& mod : m_mods) {
             mod.hasUpdate = false;
-            if (!mod.isInstalled || mod.lastUpdate.isEmpty() || mod.installPath.isEmpty())
+            if (!mod.isInstalled || mod.version.isEmpty())
                 continue;
 
-            bool ok = false;
-            qint64 apiTs = mod.lastUpdate.toLongLong(&ok);
-            if (!ok) apiTs = static_cast<qint64>(mod.lastUpdate.toDouble(&ok));
-            if (!ok || apiTs <= 0) continue;
-            if (apiTs > 9999999999LL) apiTs /= 1000;
+            if (!m_installedVersions.contains(mod.id))
+                continue;
+            if (m_installedVersions[mod.id] != mod.version) {
 
-            QFileInfo fi(mod.installPath);
-            if (!fi.exists()) continue;
-            qint64 diskTs = fi.lastModified().toSecsSinceEpoch();
 
-            if (apiTs > diskTs + 3600) {
+
                 mod.hasUpdate = true;
                 updateCount++;
             }
         }
+
+        if (updateCount > 0)
+            spdlog::info("Update check: {} addon(s) have version changes", updateCount);
 
         if (matchedCount < installedDirs.size()) {
             QStringList unmatched;
@@ -580,11 +575,26 @@ void Lexicon::checkInstalledAddons() {
 }
 
 void Lexicon::onInstalledAddonsCheckFinished() {
+    // Migrate old hex checksums to version strings
+    bool migrated = false;
+    for (auto it = m_installedVersions.begin(); it != m_installedVersions.end(); ) {
+        if (it.value().length() == 32 && !it.value().contains('.')) {
+            it = m_installedVersions.erase(it);
+            migrated = true;
+        } else {
+            ++it;
+        }
+    }
+    if (migrated) {
+        spdlog::info("Migrated old checksums to version strings");
+        saveInstalledFolders();
+    }
+
     int seeded = 0;
     bool needSave = false;
     for (const ModInfo& mod : m_mods) {
-        if (mod.isInstalled && !mod.checksum.isEmpty() && !m_installedChecksums.contains(mod.id)) {
-            m_installedChecksums[mod.id] = mod.checksum;
+        if (mod.isInstalled && !mod.version.isEmpty() && !m_installedVersions.contains(mod.id)) {
+            m_installedVersions[mod.id] = mod.version;
             needSave = true;
             seeded++;
         }
@@ -920,7 +930,7 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
 
     if (m_installedFolders.contains(modId)) {
         const QStringList folders = m_installedFolders.take(modId);
-        m_installedChecksums.remove(modId);
+        m_installedVersions.remove(modId);
         saveInstalledFolders();
 
         QDir addonsDir(addonsPath);
@@ -956,7 +966,7 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
             if (d.compare(pathName, Qt::CaseInsensitive) == 0) {
                 const QString fullPath = addonsDir.filePath(dir);
                 QDir(fullPath).removeRecursively();
-                m_installedChecksums.remove(modId);
+                m_installedVersions.remove(modId);
                 saveInstalledFolders();
                 emit addonUninstallFinished(modId);
                 refreshInstalledStatus();
@@ -975,7 +985,7 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         if (lowerDir == lowerTitle || lowerDir == lowerTitleNoSpaces || lowerDir == strippedTitle) {
             const QString fullPath = addonsDir.filePath(dir);
             QDir(fullPath).removeRecursively();
-            m_installedChecksums.remove(modId);
+            m_installedVersions.remove(modId);
             saveInstalledFolders();
             emit addonUninstallFinished(modId);
             refreshInstalledStatus();
@@ -987,7 +997,7 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         if (lowerDirNoSpaces == lowerTitleNoSpaces || lowerDirNoSpaces == strippedTitle) {
             const QString fullPath = addonsDir.filePath(dir);
             QDir(fullPath).removeRecursively();
-            m_installedChecksums.remove(modId);
+            m_installedVersions.remove(modId);
             saveInstalledFolders();
             emit addonUninstallFinished(modId);
             refreshInstalledStatus();
@@ -1047,7 +1057,7 @@ void Lexicon::cleanUnusedLibraries()
         if (m_installedFolders.contains(lib.id)) {
             for (const QString& folder : m_installedFolders.take(lib.id))
                 QDir(addonsDir.filePath(folder)).removeRecursively();
-            m_installedChecksums.remove(lib.id);
+            m_installedVersions.remove(lib.id);
         } else {
             uninstallAddon(lib.id, lib.title);
         }
@@ -1086,7 +1096,7 @@ void Lexicon::loadInstalledFolders()
             if (ck.isEmpty()) ck = obj["t"].toString();
             if (ck.isEmpty()) ck = obj["v"].toString();
             if (!ck.isEmpty())
-                m_installedChecksums[it.key()] = ck;
+                m_installedVersions[it.key()] = ck;
         } else if (val.isArray()) {
             const QJsonArray arr = val.toArray();
             QStringList folders;
@@ -1108,12 +1118,12 @@ void Lexicon::saveInstalledFolders()
         for (const QString& folder : it.value())
             arr.append(folder);
         obj["f"] = arr;
-        if (m_installedChecksums.contains(it.key()))
-            obj["c"] = m_installedChecksums[it.key()];
+        if (m_installedVersions.contains(it.key()))
+            obj["c"] = m_installedVersions[it.key()];
         root[it.key()] = obj;
     }
 
-    for (auto it = m_installedChecksums.begin(); it != m_installedChecksums.end(); ++it) {
+    for (auto it = m_installedVersions.begin(); it != m_installedVersions.end(); ++it) {
         if (!root.contains(it.key())) {
             QJsonObject obj;
             obj["f"] = QJsonArray();
@@ -1148,8 +1158,8 @@ void Lexicon::trackInstalledFolders(const QString& modId, const QStringList& bef
 
     // Store version for update detection
     for (const ModInfo& mod : m_mods) {
-        if (mod.id == modId && !mod.checksum.isEmpty()) {
-            m_installedChecksums[modId] = mod.checksum;
+        if (mod.id == modId && !mod.version.isEmpty()) {
+            m_installedVersions[modId] = mod.version;
             break;
         }
     }
