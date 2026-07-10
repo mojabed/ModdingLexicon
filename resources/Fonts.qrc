@@ -1,10 +1,6 @@
 <RCC>
     <qresource prefix="/fonts">
         <file>InterVariable.ttf</file>
-        <file alias="Roboto-Regular.ttf">fonts/Roboto-Regular.ttf</file>
-        <file alias="Roboto-Bold.ttf">fonts/Roboto-Bold.ttf</file>
-        <file alias="Roboto-Italic.ttf">fonts/Roboto-Italic.ttf</file>
-        <file alias="Roboto-BoldItalic.ttf">fonts/Roboto-BoldItalic.ttf</file>
     </qresource>
     <qresource prefix="/icons">
         <file>app_icon.png</file>
