@@ -50,9 +50,9 @@ Source: "out\build\release\translations\*";             DestDir: "{app}\translat
 Source: "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Redist\MSVC\14.51.36231\x64\Microsoft.VC145.CRT\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#AppName}";            Filename: "{app}"
+Name: "{group}\{#AppName}";            Filename: "{app}\{#AppExeName}"
 Name: "{group}\Uninstall {#AppName}";  Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}";      Filename: "{app}"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}";      Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
