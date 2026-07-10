@@ -1018,7 +1018,6 @@ void Lexicon::cleanUnusedLibraries()
     const QString addonsPath = Pathing::getInstance()->paths().addons;
     if (addonsPath.isEmpty()) { return; }
 
-    struct LibInfo { QString id; QString title; };
     QList<LibInfo> installedLibs;
     for (const ModInfo& mod : m_mods) {
         if (!mod.isInstalled) continue;
@@ -1028,31 +1027,47 @@ void Lexicon::cleanUnusedLibraries()
     if (installedLibs.isEmpty()) { emit cleanLibrariesFinished(0); return; }
 
     QSet<QString> neededLibs;
+    static const QRegularExpression verSuffix(QStringLiteral("[><=]+[\\d.]+$"));
     for (const ModInfo& mod : m_mods) {
         if (!mod.isInstalled) continue;
         for (const Dependencies& dep : mod.addons) {
-            for (const QString& raw : dep.requiredDependencies)
-                neededLibs.insert(raw.trimmed().toLower());
-            for (const QString& raw : dep.optionalDependencies)
-                neededLibs.insert(raw.trimmed().toLower());
+            for (const QString& raw : dep.requiredDependencies) {
+                QString clean = QString(raw).remove(verSuffix).trimmed();
+                if (!clean.isEmpty()) neededLibs.insert(clean.toLower());
+            }
+            for (const QString& raw : dep.optionalDependencies) {
+                QString clean = QString(raw).remove(verSuffix).trimmed();
+                if (!clean.isEmpty()) neededLibs.insert(clean.toLower());
+            }
         }
     }
 
-    QList<LibInfo> unusedLibs;
+    m_pendingCleanup.clear();
     for (const LibInfo& lib : installedLibs) {
         const QString lt = lib.title.toLower(), ltns = QString(lt).remove(' ');
         bool needed = false;
         for (const QString& n : neededLibs) {
             if (lt == n || ltns == QString(n).remove(' ') || lt.contains(n)) { needed = true; break; }
         }
-        if (!needed) unusedLibs.append(lib);
+        if (!needed) m_pendingCleanup.append(lib);
     }
-    if (unusedLibs.isEmpty()) { emit cleanLibrariesFinished(0); return; }
+    if (m_pendingCleanup.isEmpty()) { emit cleanLibrariesFinished(0); return; }
 
+    QStringList titles;
+    for (const auto& lib : m_pendingCleanup)
+        titles.append(lib.title);
+    emit cleanLibrariesConfirm(titles);
+}
+
+void Lexicon::confirmCleanLibraries()
+{
+    if (m_pendingCleanup.isEmpty()) { emit cleanLibrariesFinished(0); return; }
+
+    const QString addonsPath = Pathing::getInstance()->paths().addons;
     QDir addonsDir(addonsPath);
-    for (int i = 0; i < unusedLibs.size(); ++i) {
-        const LibInfo& lib = unusedLibs[i];
-        emit cleanLibrariesProgress(i + 1, unusedLibs.size(), lib.title);
+    for (int i = 0; i < m_pendingCleanup.size(); ++i) {
+        const auto& lib = m_pendingCleanup[i];
+        emit cleanLibrariesProgress(i + 1, m_pendingCleanup.size(), lib.title);
 
         if (m_installedFolders.contains(lib.id)) {
             for (const QString& folder : m_installedFolders.take(lib.id))
@@ -1064,7 +1079,8 @@ void Lexicon::cleanUnusedLibraries()
     }
     saveInstalledFolders();
     refreshInstalledStatus();
-    emit cleanLibrariesFinished(unusedLibs.size());
+    emit cleanLibrariesFinished(m_pendingCleanup.size());
+    m_pendingCleanup.clear();
 }
 
 void Lexicon::loadInstalledFolders()

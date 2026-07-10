@@ -45,6 +45,7 @@ public:
     Q_INVOKABLE void refreshCategoryCounts();
     Q_INVOKABLE void setAddonsPath(const QString& path);
     Q_INVOKABLE void cleanUnusedLibraries();
+    Q_INVOKABLE void confirmCleanLibraries();
     QString currentDescription() const { return m_currentDescription; }
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }
@@ -63,6 +64,7 @@ signals:
     void gameVersionChanged();
     void availableUpdatesChanged();
     void cleanLibrariesProgress(int current, int total, const QString& libTitle);
+    void cleanLibrariesConfirm(const QStringList& titles);
     void cleanLibrariesFinished(int count);
 
 private slots:
@@ -103,6 +105,8 @@ private:
     QMap<QString, QString> m_categoryNames;
     QMap<QString, QString> m_categoryIcons;
     QMap<QString, QStringList> m_installedFolders;
+    struct LibInfo { QString id; QString title; };
+    QList<LibInfo> m_pendingCleanup;
     QMap<QString, QString> m_installedVersions;
     QString m_discontinuedCategoryId;
 

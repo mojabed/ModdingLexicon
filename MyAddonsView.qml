@@ -114,7 +114,13 @@ Item {
                 Material.accent: Material.DeepPurple
                 highlighted: true
                 text: "Clean"
-                onClicked: cleanDialog.open()
+                onClicked: {
+                    cleanDialog.pendingTitles = []
+                    cleanDialog.cleaningDone = false
+                    cleanDialog.cleaningInProgress = false
+                    root.lexiconController.cleanUnusedLibraries()
+                    cleanDialog.open()
+                }
             }
         }
     }
@@ -132,6 +138,7 @@ Item {
         property int cleanedCount: 0
         property bool cleaningInProgress: false
         property bool cleaningDone: false
+        property var pendingTitles: []
 
         background: Rectangle {
             color: "#232323"; radius: 8; border.color: "#444"; border.width: 1
@@ -160,14 +167,36 @@ Item {
                 Layout.fillWidth: true
             }
 
+            ListView {
+                visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone && cleanDialog.pendingTitles.length > 0
+                Layout.preferredHeight: Math.min(200, cleanDialog.pendingTitles.length * 24)
+                Layout.fillWidth: true
+                model: cleanDialog.pendingTitles
+                delegate: Text {
+                    text: "• " + modelData
+                    color: "#cccccc"
+                    font.family: root.appFontFamily
+                    font.pixelSize: 13
+                }
+            }
+
             Text {
-                visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone
-                text: "Are you sure you want to uninstall unused libraries?"
+                visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone && cleanDialog.pendingTitles.length > 0
+                text: cleanDialog.pendingTitles.length + " unused librar" + (cleanDialog.pendingTitles.length !== 1 ? "ies" : "y") + " will be removed. Proceed?"
                 color: "white"
                 font.family: root.appFontFamily
                 font.pixelSize: 14
                 font.bold: true
                 wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            Text {
+                visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone && cleanDialog.pendingTitles.length === 0
+                text: "No unused libraries found."
+                color: "#90EE90"
+                font.family: root.appFontFamily
+                font.pixelSize: 14
                 Layout.fillWidth: true
             }
 
@@ -225,7 +254,7 @@ Item {
 
                 // Yes / No
                 Button {
-                    visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone
+                    visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone && cleanDialog.pendingTitles.length > 0
                     text: "Yes"
                     font.family: root.appFontFamily
                     font.pixelSize: 13
@@ -233,12 +262,12 @@ Item {
                     highlighted: true
                     onClicked: {
                         cleanDialog.cleaningInProgress = true
-                        root.lexiconController.cleanUnusedLibraries()
+                        root.lexiconController.confirmCleanLibraries()
                     }
                 }
                 Button {
                     visible: !cleanDialog.cleaningInProgress && !cleanDialog.cleaningDone
-                    text: "No"
+                    text: cleanDialog.pendingTitles.length > 0 ? "No" : "Close"
                     font.family: root.appFontFamily
                     font.pixelSize: 13
                     onClicked: cleanDialog.close()
@@ -271,6 +300,9 @@ Item {
 
     Connections {
         target: root.lexiconController
+        function onCleanLibrariesConfirm(titles) {
+            cleanDialog.pendingTitles = titles
+        }
         function onCleanLibrariesProgress(current, total, libTitle) {
             cleanProgressBar.to = total
             cleanProgressBar.value = current
