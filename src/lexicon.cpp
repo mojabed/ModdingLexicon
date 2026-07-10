@@ -183,10 +183,8 @@ void Lexicon::applyGameVersionsToMods() {
         if (it == m_gameVersionMap.end()) {
             --it;
         } else if (it.key() > apiVersion) {
-            if (it == m_gameVersionMap.begin()) {
-            } else {
+            if (it != m_gameVersionMap.begin())
                 --it;
-            }
         }
 
         const auto& pair = it.value();
@@ -395,8 +393,9 @@ void Lexicon::checkInstalledAddons() {
             normalizedTitle.remove(' ');
             normalizedTitle.remove('\'');
 
+            static const QRegularExpression versionSuffix(QStringLiteral("[\\d.]+$"));
             QString strippedTitle = normalizedTitle;
-            strippedTitle.remove(QRegularExpression("[\\d.]+$"));
+            strippedTitle.remove(versionSuffix);
 
             if (installedDirsSet.contains(lowerTitle)) {
                 mod.isInstalled = true;
@@ -524,9 +523,6 @@ void Lexicon::checkInstalledAddons() {
             if (!m_installedVersions.contains(mod.id))
                 continue;
             if (m_installedVersions[mod.id] != mod.version) {
-
-
-
                 mod.hasUpdate = true;
                 updateCount++;
             }
@@ -762,7 +758,7 @@ void Lexicon::downloadAndExtractAddon(const QString& modId, const QString& title
 
         QString command = QStringLiteral(
             "powershell -NoProfile -Command \"Expand-Archive -LiteralPath '%1' -DestinationPath '%2' -Force\"")
-            .arg(tempFilePath, addonsPath);
+            .arg(QString(tempFilePath).replace('\'', "''"), QString(addonsPath).replace('\'', "''"));
 
         process->start(command);
     });
@@ -977,8 +973,9 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
 
     const QString lowerTitle = title.toLower();
     const QString lowerTitleNoSpaces = QString(lowerTitle).remove(' ').remove('\'');
+    static const QRegularExpression versionSuffix2(QStringLiteral("[\\d.]+$"));
     QString strippedTitle = lowerTitleNoSpaces;
-    strippedTitle.remove(QRegularExpression("[\\d.]+$"));
+    strippedTitle.remove(versionSuffix2);
 
     for (const QString& dir : dirs) {
         QString lowerDir = dir.toLower();
