@@ -1,4 +1,5 @@
 # <p align="center">Modding Lexicon</p>
+## <p align="center"><br>An Elder Scrolls Online Addon Manager</p>
 
 <p align="center">
     <b>The right addon manager for everyone</b><br>
