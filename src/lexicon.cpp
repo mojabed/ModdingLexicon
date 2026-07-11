@@ -83,7 +83,7 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
             Pathing::getInstance()->paths().appData + "/image_cache");
     });
 
-    // Check for app updates on launch
+    // Check for app updates via version.json on launch
     QTimer::singleShot(3000, this, [this]() { checkForAppUpdate(); });
 }
 
@@ -1239,8 +1239,8 @@ QString Lexicon::appUpdateVersion() const
 void Lexicon::checkForAppUpdate()
 {
     QNetworkAccessManager* mgr = new QNetworkAccessManager(this);
-    QNetworkRequest req(QUrl("https://api.github.com/repos/mojabed/ModdingLexicon/releases/latest"));
-    req.setRawHeader("Accept", "application/vnd.github.v3+json");
+    QUrl url(QStringLiteral("https://raw.githubusercontent.com/mojabed/ModdingLexicon/master/version.json"));
+    QNetworkRequest req(url);
     req.setRawHeader("User-Agent", "ModdingLexicon/1.0");
     req.setTransferTimeout(10000);
 
@@ -1257,29 +1257,17 @@ void Lexicon::checkForAppUpdate()
         QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
         if (!doc.isObject()) return;
         QJsonObject obj = doc.object();
-        QString tag = obj["tag_name"].toString();
+        QString latest = obj["version"].toString();
+        QString downloadUrl = obj["url"].toString();
         QString current = appVersion();
 
-        // Strip leading 'v' if present
-        if (tag.startsWith('v', Qt::CaseInsensitive))
-            tag = tag.mid(1);
+        if (latest.isEmpty() || downloadUrl.isEmpty() || latest == current) return;
 
-        spdlog::info("App update check: current={} latest={}", current.toStdString(), tag.toStdString());
-        if (tag.isEmpty() || tag == current) return;
-
-        QJsonArray assets = obj["assets"].toArray();
-        for (const QJsonValue& val : assets) {
-            QJsonObject asset = val.toObject();
-            QString name = asset["name"].toString();
-            if (name.contains("Setup", Qt::CaseInsensitive) && name.endsWith(".exe", Qt::CaseInsensitive)) {
-                m_appUpdateVersion = tag;
-                m_appUpdateDownloadUrl = asset["browser_download_url"].toString();
-                m_appUpdateAvailable = true;
-                emit appUpdateAvailableChanged();
-                spdlog::info("App update available: {} from {}", tag.toStdString(), m_appUpdateDownloadUrl.toStdString());
-                return;
-            }
-        }
+        m_appUpdateVersion = latest;
+        m_appUpdateDownloadUrl = downloadUrl;
+        m_appUpdateAvailable = true;
+        emit appUpdateAvailableChanged();
+        spdlog::info("App update available: {} from {}", latest.toStdString(), downloadUrl.toStdString());
     });
 }
 
@@ -1308,7 +1296,6 @@ void Lexicon::downloadAppUpdate()
         if (file.open(QIODevice::WriteOnly)) {
             file.write(updateReply->readAll());
             file.close();
-            spdlog::info("App update downloaded to {}", installerPath.toStdString());
             QProcess::startDetached(installerPath, QStringList());
             QCoreApplication::quit();
         }
