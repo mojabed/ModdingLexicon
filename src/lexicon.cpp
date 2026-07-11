@@ -599,8 +599,11 @@ void Lexicon::onInstalledAddonsCheckFinished() {
 
     for (ModInfo& mod : m_mods) {
         mod.storedVersion.clear();
-        if (m_installedVersions.contains(mod.id))
+        if (m_installedVersions.contains(mod.id)) {
             mod.storedVersion = m_installedVersions[mod.id];
+            if (mod.isInstalled)
+                spdlog::info("  stored version: {} stored={} current={}", mod.title.toStdString(), mod.storedVersion.toStdString(), mod.version.toStdString());
+        }
     }
 
     m_addonModel->setMods(m_mods);
@@ -1090,7 +1093,7 @@ void Lexicon::cleanUnusedLibraries()
         }
     }
 
-    neededLibIds.insert("2625"); neededLibIds.insert("3353");
+    neededLibIds.insert("2625"); neededLibIds.insert("3353"); neededLibIds.insert("4494");
 
     spdlog::info("clean: {} libs scanned, {} resolved dep IDs", installedLibs.size(), neededLibIds.size());
     m_pendingCleanup.clear();
