@@ -1345,7 +1345,8 @@ void Lexicon::checkForAppUpdate()
 
 void Lexicon::downloadAppUpdate()
 {
-    if (m_appUpdateDownloadUrl.isEmpty()) return;
+    if (m_appUpdateDownloadUrl.isEmpty()) { spdlog::error("downloadAppUpdate: empty URL"); return; }
+    spdlog::info("downloadAppUpdate: downloading {}", m_appUpdateDownloadUrl.toStdString());
 
     QString installerPath = QDir::tempPath() + QStringLiteral("/ModdingLexicon_Update.exe");
     QNetworkAccessManager* mgr = new QNetworkAccessManager(this);
@@ -1353,6 +1354,7 @@ void Lexicon::downloadAppUpdate()
     QNetworkRequest updateReq(url);
     updateReq.setRawHeader("User-Agent", "ModdingLexicon/1.0");
     updateReq.setTransferTimeout(60000);
+    updateReq.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     QNetworkReply* updateReply = mgr->get(updateReq);
     connect(updateReply, &QNetworkReply::finished, this, [this, updateReply, mgr, installerPath]() {
