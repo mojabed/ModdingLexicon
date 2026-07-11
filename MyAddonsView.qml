@@ -88,8 +88,8 @@ Item {
                 font.family: root.appFontFamily
                 font.pixelSize: 12
                 font.bold: true
-                Material.accent: Material.DeepPurple
-                highlighted: true
+                Material.accent: Material.Grey
+                flat: true
                 onClicked: {
                     if (!root.lexiconController) return
                     var f = root.lexiconController.installedAddonsFilter
@@ -111,8 +111,8 @@ Item {
                 font.family: root.appFontFamily
                 font.pixelSize: 12
                 font.bold: true
-                Material.accent: Material.DeepPurple
-                highlighted: true
+                Material.accent: Material.Grey
+                flat: true
                 text: "Clean"
                 onClicked: {
                     cleanDialog.pendingTitles = []

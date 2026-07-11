@@ -153,8 +153,8 @@ ApplicationWindow {
 
                 background: Rectangle {
                     radius: 22
-                    color: updateDetailBtnHover.hovered ? "#4a2e6e" : "#3a1e5e"
-                    border.color: updateDetailBtnHover.hovered ? "#7c4dff" : "#5e35b1"
+                    color: updateDetailBtnHover.hovered ? Material.color(Material.Grey, Material.Shade600) : Material.color(Material.Grey, Material.Shade700)
+                    border.color: updateDetailBtnHover.hovered ? Material.color(Material.Grey, Material.Shade400) : Material.color(Material.Grey, Material.Shade500)
                     border.width: 1
                 }
 
@@ -207,15 +207,15 @@ ApplicationWindow {
                             return Material.color(Material.Grey, Material.Shade700)
                         if (installButton.isUninstall)
                             return installButton.hovered ? "#5e2a2a" : "#4a2020"
-                        return installButton.hovered ? Material.color(Material.DeepPurple, Material.Shade400)
-                                                     : Material.color(Material.DeepPurple, Material.Shade500)
+                        return installButton.hovered ? Material.color(Material.Grey, Material.Shade600)
+                                                     : Material.color(Material.Grey, Material.Shade700)
                     }
                     border.color: {
                         if (!installButton.enabled)
                             return Material.color(Material.Grey, Material.Shade600)
                         if (installButton.isUninstall)
                             return installButton.hovered ? "#8e4a4a" : "#6e3535"
-                        return Material.color(Material.DeepPurple, Material.Shade300)
+                        return Material.color(Material.Grey, Material.Shade500)
                     }
                     border.width: 1
                 }

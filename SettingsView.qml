@@ -93,8 +93,9 @@ Item {
                             Layout.preferredHeight: 36
                             font.family: root.appFontFamily
                             font.pixelSize: 13
-                            Material.accent: Material.DeepPurple
-                            highlighted: true
+                            Material.accent: Material.Grey
+                            Material.foreground: Material.Grey
+                            flat: true
 
                             onClicked: folderDialog.open()
                         }

@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     
     QGuiApplication app(argc, argv);
     app.setApplicationName("ModdingLexicon");
-    app.setApplicationVersion("1.3");
+    app.setApplicationVersion("1.4");
 
     setupSpdlog();
 
