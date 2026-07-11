@@ -1295,7 +1295,7 @@ QString Lexicon::getInstalledVersionForAddon(const QString& modId) const
 
 QString Lexicon::appVersion() const
 {
-    return QStringLiteral("1.2");
+    return QCoreApplication::applicationVersion();
 }
 
 bool Lexicon::appUpdateAvailable() const
@@ -1311,7 +1311,7 @@ QString Lexicon::appUpdateVersion() const
 void Lexicon::checkForAppUpdate()
 {
     QNetworkAccessManager* mgr = new QNetworkAccessManager(this);
-    QUrl url(QStringLiteral("https://raw.githubusercontent.com/mojabed/ModdingLexicon/master/version.json"));
+    QUrl url(QStringLiteral("https://raw.githubusercontent.com/mojabed/ModdingLexicon/master/version.json?t=%1").arg(QDateTime::currentSecsSinceEpoch()));
     QNetworkRequest req(url);
     req.setRawHeader("User-Agent", "ModdingLexicon/1.0");
     req.setTransferTimeout(10000);
@@ -1332,7 +1332,7 @@ void Lexicon::checkForAppUpdate()
         QString latest = obj["version"].toString();
         QString downloadUrl = obj["url"].toString();
         QString current = appVersion();
-
+        spdlog::info("App update check: latest='{}' current='{}'", latest.toStdString(), current.toStdString());
         if (latest.isEmpty() || downloadUrl.isEmpty() || latest == current) return;
 
         m_appUpdateVersion = latest;
