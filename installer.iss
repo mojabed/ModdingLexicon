@@ -2,7 +2,7 @@
 ; Download Inno Setup 6: https://jrsoftware.org/isdl.php
 
 #define AppName      "Modding Lexicon"
-#define AppVersion   "1.4"
+#define AppVersion   "1.3"
 #define AppPublisher "mojabed"
 #define AppURL       "https://github.com/mojabed/ModdingLexicon"
 #define AppExeName   "ModdingLexicon.exe"

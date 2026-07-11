@@ -1348,13 +1348,14 @@ void Lexicon::downloadAppUpdate()
     if (m_appUpdateDownloadUrl.isEmpty()) { spdlog::error("downloadAppUpdate: empty URL"); return; }
     spdlog::info("downloadAppUpdate: downloading {}", m_appUpdateDownloadUrl.toStdString());
 
-    QString installerPath = QDir::tempPath() + QStringLiteral("/ModdingLexicon_Update.exe");
+    QString installerPath = QDir::toNativeSeparators(QDir::tempPath() + "/ModdingLexicon_Update.exe");
+    spdlog::info("downloadAppUpdate: saving to {}", installerPath.toStdString());
     QNetworkAccessManager* mgr = new QNetworkAccessManager(this);
+    mgr->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
     QUrl url(m_appUpdateDownloadUrl);
     QNetworkRequest updateReq(url);
     updateReq.setRawHeader("User-Agent", "ModdingLexicon/1.0");
     updateReq.setTransferTimeout(60000);
-    updateReq.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     QNetworkReply* updateReply = mgr->get(updateReq);
     connect(updateReply, &QNetworkReply::finished, this, [this, updateReply, mgr, installerPath]() {
@@ -1362,16 +1363,21 @@ void Lexicon::downloadAppUpdate()
         mgr->deleteLater();
 
         if (updateReply->error() != QNetworkReply::NoError) {
-            spdlog::error("App update download failed: {}", updateReply->errorString().toStdString());
+            spdlog::error("App update download failed: {} (code={})", updateReply->errorString().toStdString(), static_cast<int>(updateReply->error()));
             return;
         }
 
         QFile file(installerPath);
         if (file.open(QIODevice::WriteOnly)) {
-            file.write(updateReply->readAll());
+            QByteArray data = updateReply->readAll();
+            spdlog::info("downloadAppUpdate: received {} bytes", data.size());
+            file.write(data);
             file.close();
+            spdlog::info("downloadAppUpdate: launching installer");
             QProcess::startDetached(installerPath, QStringList());
             QCoreApplication::quit();
+        } else {
+            spdlog::error("downloadAppUpdate: cannot write to {}", installerPath.toStdString());
         }
     });
 }
