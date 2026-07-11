@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 ApplicationWindow {
     id: detailWindow
@@ -513,5 +514,83 @@ ApplicationWindow {
         color: badgeColor
         font.family: detailWindow.appFontFamily
         font.pixelSize: 14
+    }
+
+    // Optional dependencies dialog
+    Dialog {
+        id: optionalDepsDialog
+        title: "Optional Dependencies"
+        anchors.centerIn: parent
+        width: 420
+        modal: true
+        closePolicy: Popup.NoAutoClose
+        Material.accent: Material.DeepPurple
+
+        property string depModId: ""
+        property var depList: []
+
+        background: Rectangle { color: "#232323"; radius: 8; border.color: "#444"; border.width: 1 }
+
+        header: Text {
+            text: "Optional Dependencies"
+            color: "white"; font.family: detailWindow.appFontFamily; font.pixelSize: 16; font.bold: true
+            leftPadding: 20; topPadding: 16; bottomPadding: 8
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 12; width: parent.width - 40
+
+            Text {
+                text: "This addon has optional dependencies. Check the ones you would like to install:"
+                color: "#aaaaaa"; font.family: detailWindow.appFontFamily; font.pixelSize: 13
+                wrapMode: Text.WordWrap; Layout.fillWidth: true
+            }
+
+            ListView {
+                id: optionalDepsList
+                Layout.preferredHeight: Math.min(250, optionalDepsDialog.depList.length * 32)
+                Layout.fillWidth: true; model: optionalDepsDialog.depList
+                delegate: CheckDelegate {
+                    text: modelData; width: optionalDepsList.width
+                    font.family: detailWindow.appFontFamily; font.pixelSize: 13
+                    Material.accent: Material.DeepPurple
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true; Layout.alignment: Qt.AlignRight; spacing: 10
+                Button {
+                    text: "Install Selected"; font.family: detailWindow.appFontFamily; font.pixelSize: 13
+                    Material.accent: Material.DeepPurple; highlighted: true
+                    onClicked: {
+                        for (var i = 0; i < optionalDepsList.count; i++) {
+                            var item = optionalDepsList.itemAtIndex(i)
+                            if (item && item.checked)
+                                detailWindow.lexiconController.installOptionalDependency(optionalDepsDialog.depModId, item.text)
+                        }
+                        detailWindow.lexiconController.finishAddonInstall(optionalDepsDialog.depModId)
+                        optionalDepsDialog.close()
+                    }
+                }
+                Button {
+                    text: "Skip"; font.family: detailWindow.appFontFamily; font.pixelSize: 13
+                    onClicked: {
+                        detailWindow.lexiconController.finishAddonInstall(optionalDepsDialog.depModId)
+                        optionalDepsDialog.close()
+                    }
+                }
+            }
+        }
+    }
+
+    Connections {
+        target: detailWindow.lexiconController
+        function onOptionalDependenciesPrompt(modId, modTitle, depTitles) {
+            if (modId === detailWindow.addonId) {
+                optionalDepsDialog.depModId = modId
+                optionalDepsDialog.depList = depTitles
+                optionalDepsDialog.open()
+            }
+        }
     }
 }

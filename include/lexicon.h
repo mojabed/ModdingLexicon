@@ -52,6 +52,8 @@ public:
     Q_INVOKABLE QString getInstalledVersionForAddon(const QString& modId) const;
     Q_INVOKABLE void checkForAppUpdate();
     Q_INVOKABLE void downloadAppUpdate();
+    Q_INVOKABLE void installOptionalDependency(const QString& modId, const QString& depTitle);
+    Q_INVOKABLE void finishAddonInstall(const QString& modId);
     QString currentDescription() const { return m_currentDescription; }
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }
@@ -76,6 +78,7 @@ signals:
     void cleanLibrariesConfirm(const QStringList& titles);
     void cleanLibrariesFinished(int count);
     void appUpdateAvailableChanged();
+    void optionalDependenciesPrompt(const QString& modId, const QString& modTitle, const QStringList& depTitles);
 
 private slots:
     void onParsingFinished();

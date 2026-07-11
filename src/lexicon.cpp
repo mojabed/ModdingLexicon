@@ -779,27 +779,35 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
     }
     if (!mod) return;
 
-    // Collect unique dependency titles (strip version constraints like >=43, >30, etc.)
     QSet<QString> depTitles;
+    QStringList optionalTitles;
     static const QRegularExpression verSuffix(QStringLiteral("[><=]+[\\d.]+$"));
     for (const Dependencies& dep : mod->addons) {
         for (const QString& rawTitle : dep.requiredDependencies) {
             QString clean = QString(rawTitle).remove(verSuffix).trimmed();
-            depTitles.insert(clean);
+            if (!clean.isEmpty()) depTitles.insert(clean);
         }
         for (const QString& rawTitle : dep.optionalDependencies) {
             QString clean = QString(rawTitle).remove(verSuffix).trimmed();
-            depTitles.insert(clean);
+            if (!clean.isEmpty() && !depTitles.contains(clean)) optionalTitles.append(clean);
         }
     }
+    optionalTitles.removeDuplicates();
 
     if (depTitles.isEmpty()) {
+        if (!optionalTitles.isEmpty()) {
+            QString modTitle;
+            for (const ModInfo& m : m_mods) { if (m.id == modId) { modTitle = m.title; break; } }
+            QTimer::singleShot(50, this, [this, modId, modTitle, optionalTitles]() {
+                emit optionalDependenciesPrompt(modId, modTitle, optionalTitles);
+            });
+        } else {
+            emit addonInstallFinished(modId);
+        }
         refreshInstalledStatus();
-        emit addonInstallFinished(modId);
         return;
     }
 
-    // Resolve titles to ModInfo entries
     struct DepEntry { QString id; QString title; QString downloadUrl; };
     QList<DepEntry> toInstall;
 
@@ -855,8 +863,16 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
     }
 
     if (toInstall.isEmpty()) {
+        if (!optionalTitles.isEmpty()) {
+            QString modTitle;
+            for (const ModInfo& m : m_mods) { if (m.id == modId) { modTitle = m.title; break; } }
+            QTimer::singleShot(50, this, [this, modId, modTitle, optionalTitles]() {
+                emit optionalDependenciesPrompt(modId, modTitle, optionalTitles);
+            });
+        } else {
+            emit addonInstallFinished(modId);
+        }
         refreshInstalledStatus();
-        emit addonInstallFinished(modId);
         return;
     }
 
@@ -866,10 +882,18 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
     auto sharedList = std::make_shared<QList<DepEntry>>(toInstall);
     auto installNext = std::make_shared<std::function<void()>>();
 
-    *installNext = [this, modId, sharedIdx, sharedList, installNext]() {
+    *installNext = [this, modId, sharedIdx, sharedList, installNext, optionalTitles]() {
         if (*sharedIdx >= sharedList->size()) {
+            if (!optionalTitles.isEmpty()) {
+                QString modTitle;
+                for (const ModInfo& m : m_mods) { if (m.id == modId) { modTitle = m.title; break; } }
+                QTimer::singleShot(50, this, [this, modId, modTitle, optionalTitles]() {
+                    emit optionalDependenciesPrompt(modId, modTitle, optionalTitles);
+                });
+            } else {
+                emit addonInstallFinished(modId);
+            }
             refreshInstalledStatus();
-            emit addonInstallFinished(modId);
             return;
         }
 
@@ -1027,30 +1051,76 @@ void Lexicon::cleanUnusedLibraries()
     }
     if (installedLibs.isEmpty()) { emit cleanLibrariesFinished(0); return; }
 
-    QSet<QString> neededLibs;
+    QSet<QString> neededLibIds;
     static const QRegularExpression verSuffix(QStringLiteral("[><=]+[\\d.]+$"));
     for (const ModInfo& mod : m_mods) {
         if (!mod.isInstalled) continue;
+        if (mod.title.startsWith(QStringLiteral("Lib"), Qt::CaseInsensitive) || mod.library) continue;
         for (const Dependencies& dep : mod.addons) {
-            for (const QString& raw : dep.requiredDependencies) {
-                QString clean = QString(raw).remove(verSuffix).trimmed();
-                if (!clean.isEmpty()) neededLibs.insert(clean.toLower());
-            }
-            for (const QString& raw : dep.optionalDependencies) {
-                QString clean = QString(raw).remove(verSuffix).trimmed();
-                if (!clean.isEmpty()) neededLibs.insert(clean.toLower());
-            }
+            auto resolveAndInsert = [&](const QString& raw) {
+                QString depTitle = QString(raw).remove(verSuffix).trimmed();
+                if (depTitle.isEmpty()) return;
+                QString lt = depTitle.toLower(), ltns = QString(lt).remove(' ');
+                // Pass 1: exact title match on installed library mods
+                for (const ModInfo& m : m_mods) {
+                    if (!m.isInstalled) continue;
+                    if (!(m.title.startsWith("Lib", Qt::CaseInsensitive) || m.library)) continue;
+                    if (m.title.toLower() == lt || QString(m.title.toLower()).remove(' ') == ltns)
+                        { neededLibIds.insert(m.id); return; }
+                }
+                // Pass 2: match by addons[0].path (library mods only)
+                for (const ModInfo& m : m_mods) {
+                    if (!m.isInstalled || m.addons.isEmpty()) continue;
+                    if (!(m.title.startsWith("Lib", Qt::CaseInsensitive) || m.library)) continue;
+                    if (m.addons[0].path.toLower() == lt || QString(m.addons[0].path.toLower()).remove(' ') == ltns)
+                        { neededLibIds.insert(m.id); return; }
+                }
+                // Pass 3: substring match on library mods (min 4 chars)
+                if (ltns.length() >= 4) {
+                    for (const ModInfo& m : m_mods) {
+                        if (!m.isInstalled) continue;
+                        if (!(m.title.startsWith("Lib", Qt::CaseInsensitive) || m.library)) continue;
+                        if (QString(m.title.toLower()).remove(' ').contains(ltns))
+                            { neededLibIds.insert(m.id); return; }
+                    }
+                }
+            };
+            for (const QString& raw : dep.requiredDependencies) resolveAndInsert(raw);
+            for (const QString& raw : dep.optionalDependencies) resolveAndInsert(raw);
         }
     }
 
+    neededLibIds.insert("2625"); neededLibIds.insert("3353");
+
+    spdlog::info("clean: {} libs scanned, {} resolved dep IDs", installedLibs.size(), neededLibIds.size());
     m_pendingCleanup.clear();
     for (const LibInfo& lib : installedLibs) {
-        const QString lt = lib.title.toLower(), ltns = QString(lt).remove(' ');
-        bool needed = false;
-        for (const QString& n : neededLibs) {
-            if (lt == n || ltns == QString(n).remove(' ') || lt.contains(n)) { needed = true; break; }
+        if (!neededLibIds.contains(lib.id)) {
+            spdlog::info("  UNUSED: {} (id={})", lib.title.toStdString(), lib.id.toStdString());
+            m_pendingCleanup.append(lib);
         }
-        if (!needed) m_pendingCleanup.append(lib);
+    }
+
+    if (!m_pendingCleanup.isEmpty()) {
+        QSet<QString> checkIds;
+        for (const auto& l : m_pendingCleanup) checkIds.insert(l.id);
+        for (auto it = m_pendingCleanup.begin(); it != m_pendingCleanup.end(); ) {
+            bool protected_ = false;
+            for (const ModInfo& mod : m_mods) {
+                if (!mod.isInstalled || checkIds.contains(mod.id) || mod.id == it->id) continue;
+                for (const Dependencies& dep : mod.addons) {
+                    for (const QString& raw : dep.requiredDependencies)
+                        if (it->title.compare(QString(raw).remove(verSuffix).trimmed(), Qt::CaseInsensitive) == 0)
+                            { protected_ = true; goto done; }
+                    for (const QString& raw : dep.optionalDependencies)
+                        if (it->title.compare(QString(raw).remove(verSuffix).trimmed(), Qt::CaseInsensitive) == 0)
+                            { protected_ = true; goto done; }
+                }
+                done: if (protected_) break;
+            }
+            if (protected_) { spdlog::info("  KEPT (lib-lib dep): {}", it->title.toStdString()); it = m_pendingCleanup.erase(it); }
+            else ++it;
+        }
     }
     if (m_pendingCleanup.isEmpty()) { emit cleanLibrariesFinished(0); return; }
 
@@ -1173,7 +1243,6 @@ void Lexicon::trackInstalledFolders(const QString& modId, const QStringList& bef
         m_installedFolders[modId] = newFolders;
     }
 
-    // Store version for update detection
     for (const ModInfo& mod : m_mods) {
         if (mod.id == modId && !mod.version.isEmpty()) {
             m_installedVersions[modId] = mod.version;
@@ -1300,4 +1369,29 @@ void Lexicon::downloadAppUpdate()
             QCoreApplication::quit();
         }
     });
+}
+
+void Lexicon::installOptionalDependency(const QString& modId, const QString& depTitle)
+{
+    const QString lowerTitle = depTitle.toLower();
+    const QString lowerTitleNoSpaces = QString(lowerTitle).remove(' ');
+    for (const ModInfo& m : m_mods) {
+        const QString mLower = m.title.toLower();
+        QString mLowerNoSpaces = mLower; mLowerNoSpaces.remove(' ');
+        if ((mLower == lowerTitle || mLowerNoSpaces == lowerTitleNoSpaces) && !m.isInstalled && !m.downloadUrl.isEmpty()) {
+            downloadAndExtractAddon(m.id, m.title, m.downloadUrl.toString(),
+                [this](bool success, const QString& error) {
+                    if (!success) spdlog::warn("Optional dep failed: {}", error.toStdString());
+                    refreshInstalledStatus();
+                });
+            return;
+        }
+    }
+    spdlog::warn("installOptionalDependency: could not find '{}'", depTitle.toStdString());
+}
+
+void Lexicon::finishAddonInstall(const QString& modId)
+{
+    refreshInstalledStatus();
+    emit addonInstallFinished(modId);
 }
