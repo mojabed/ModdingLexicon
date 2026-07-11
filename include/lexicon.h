@@ -26,6 +26,9 @@ class Lexicon : public QObject {
     Q_PROPERTY(QString gameVersionName READ gameVersionName NOTIFY gameVersionChanged)
     Q_PROPERTY(int availableUpdates READ availableUpdates NOTIFY availableUpdatesChanged)
     Q_PROPERTY(QString addonsPath READ addonsPath CONSTANT)
+    Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
+    Q_PROPERTY(bool appUpdateAvailable READ appUpdateAvailable NOTIFY appUpdateAvailableChanged)
+    Q_PROPERTY(QString appUpdateVersion READ appUpdateVersion NOTIFY appUpdateAvailableChanged)
 
 public:
     explicit Lexicon(QObject* parent = nullptr);
@@ -47,10 +50,15 @@ public:
     Q_INVOKABLE void cleanUnusedLibraries();
     Q_INVOKABLE void confirmCleanLibraries();
     Q_INVOKABLE QString getInstalledVersionForAddon(const QString& modId) const;
+    Q_INVOKABLE void checkForAppUpdate();
+    Q_INVOKABLE void downloadAppUpdate();
     QString currentDescription() const { return m_currentDescription; }
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }
     QString addonsPath() const;
+    QString appVersion() const;
+    bool appUpdateAvailable() const;
+    QString appUpdateVersion() const;
     int availableUpdates() const;
 
 signals:
@@ -67,6 +75,7 @@ signals:
     void cleanLibrariesProgress(int current, int total, const QString& libTitle);
     void cleanLibrariesConfirm(const QStringList& titles);
     void cleanLibrariesFinished(int count);
+    void appUpdateAvailableChanged();
 
 private slots:
     void onParsingFinished();
@@ -119,5 +128,8 @@ private:
     QString m_gameVersion;
     QString m_gameVersionName; 
     int m_availableUpdates = 0;
-    QMap<int, QPair<QString, QString>> m_gameVersionMap; // apiVersion -> (version, name)
+    QString m_appUpdateVersion;
+    QString m_appUpdateDownloadUrl;
+    bool m_appUpdateAvailable = false;
+    QMap<int, QPair<QString, QString>> m_gameVersionMap;
 };

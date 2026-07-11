@@ -2,8 +2,9 @@
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
-import ModdingLexicon   
+import ModdingLexicon
 
 ApplicationWindow {
     id: window
@@ -292,5 +293,79 @@ ApplicationWindow {
         }
 
         signal clicked()
+    }
+
+    // App update notification
+    Dialog {
+        id: appUpdateDialog
+        title: "Update Available"
+        anchors.centerIn: parent
+        width: 380
+        modal: true
+        closePolicy: Popup.CloseOnEscape
+        Material.accent: Material.DeepPurple
+
+        property string updateVersion: ""
+
+        background: Rectangle {
+            color: "#232323"; radius: 8; border.color: "#444"; border.width: 1
+        }
+
+        header: Text {
+            text: "Update Available"
+            color: "white"
+            font.family: window.appFontFamily
+            font.pixelSize: 16
+            font.bold: true
+            leftPadding: 20; topPadding: 16; bottomPadding: 8
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 12
+            width: parent.width - 40
+
+            Text {
+                text: "A new version (v" + appUpdateDialog.updateVersion + ") is available.\n\nWould you like to download and install it now?"
+                color: "#aaaaaa"
+                font.family: window.appFontFamily
+                font.pixelSize: 13
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignRight
+                spacing: 10
+
+                Button {
+                    text: "Yes"
+                    font.family: window.appFontFamily
+                    font.pixelSize: 13
+                    Material.accent: Material.DeepPurple
+                    highlighted: true
+                    onClicked: {
+                        lexicon.downloadAppUpdate()
+                        appUpdateDialog.close()
+                    }
+                }
+                Button {
+                    text: "No"
+                    font.family: window.appFontFamily
+                    font.pixelSize: 13
+                    onClicked: appUpdateDialog.close()
+                }
+            }
+        }
+    }
+
+    Connections {
+        target: lexicon
+        function onAppUpdateAvailableChanged() {
+            if (lexicon.appUpdateAvailable) {
+                appUpdateDialog.updateVersion = lexicon.appUpdateVersion
+                appUpdateDialog.open()
+            }
+        }
     }
 }

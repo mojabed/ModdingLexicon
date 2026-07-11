@@ -82,6 +82,9 @@ Lexicon::Lexicon(QObject* parent) : QObject(parent) {
         m_descriptionFetcher->pruneImageCache(
             Pathing::getInstance()->paths().appData + "/image_cache");
     });
+
+    // Check for app updates on launch
+    QTimer::singleShot(3000, this, [this]() { checkForAppUpdate(); });
 }
 
 Lexicon::~Lexicon() {}
@@ -1216,4 +1219,98 @@ QString Lexicon::getInstalledVersionForAddon(const QString& modId) const
     if (m_installedVersions.contains(modId))
         return m_installedVersions[modId];
     return QString();
+}
+
+QString Lexicon::appVersion() const
+{
+    return QStringLiteral("1.2");
+}
+
+bool Lexicon::appUpdateAvailable() const
+{
+    return m_appUpdateAvailable;
+}
+
+QString Lexicon::appUpdateVersion() const
+{
+    return m_appUpdateVersion;
+}
+
+void Lexicon::checkForAppUpdate()
+{
+    QNetworkAccessManager* mgr = new QNetworkAccessManager(this);
+    QNetworkRequest req(QUrl("https://api.github.com/repos/mojabed/ModdingLexicon/releases/latest"));
+    req.setRawHeader("Accept", "application/vnd.github.v3+json");
+    req.setRawHeader("User-Agent", "ModdingLexicon/1.0");
+    req.setTransferTimeout(10000);
+
+    QNetworkReply* reply = mgr->get(req);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, mgr]() {
+        reply->deleteLater();
+        mgr->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            spdlog::debug("App update check failed: {}", reply->errorString().toStdString());
+            return;
+        }
+
+        QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+        if (!doc.isObject()) return;
+        QJsonObject obj = doc.object();
+        QString tag = obj["tag_name"].toString();
+        QString current = appVersion();
+
+        // Strip leading 'v' if present
+        if (tag.startsWith('v', Qt::CaseInsensitive))
+            tag = tag.mid(1);
+
+        spdlog::info("App update check: current={} latest={}", current.toStdString(), tag.toStdString());
+        if (tag.isEmpty() || tag == current) return;
+
+        QJsonArray assets = obj["assets"].toArray();
+        for (const QJsonValue& val : assets) {
+            QJsonObject asset = val.toObject();
+            QString name = asset["name"].toString();
+            if (name.contains("Setup", Qt::CaseInsensitive) && name.endsWith(".exe", Qt::CaseInsensitive)) {
+                m_appUpdateVersion = tag;
+                m_appUpdateDownloadUrl = asset["browser_download_url"].toString();
+                m_appUpdateAvailable = true;
+                emit appUpdateAvailableChanged();
+                spdlog::info("App update available: {} from {}", tag.toStdString(), m_appUpdateDownloadUrl.toStdString());
+                return;
+            }
+        }
+    });
+}
+
+void Lexicon::downloadAppUpdate()
+{
+    if (m_appUpdateDownloadUrl.isEmpty()) return;
+
+    QString installerPath = QDir::tempPath() + QStringLiteral("/ModdingLexicon_Update.exe");
+    QNetworkAccessManager* mgr = new QNetworkAccessManager(this);
+    QUrl url(m_appUpdateDownloadUrl);
+    QNetworkRequest updateReq(url);
+    updateReq.setRawHeader("User-Agent", "ModdingLexicon/1.0");
+    updateReq.setTransferTimeout(60000);
+
+    QNetworkReply* updateReply = mgr->get(updateReq);
+    connect(updateReply, &QNetworkReply::finished, this, [this, updateReply, mgr, installerPath]() {
+        updateReply->deleteLater();
+        mgr->deleteLater();
+
+        if (updateReply->error() != QNetworkReply::NoError) {
+            spdlog::error("App update download failed: {}", updateReply->errorString().toStdString());
+            return;
+        }
+
+        QFile file(installerPath);
+        if (file.open(QIODevice::WriteOnly)) {
+            file.write(updateReply->readAll());
+            file.close();
+            spdlog::info("App update downloaded to {}", installerPath.toStdString());
+            QProcess::startDetached(installerPath, QStringList());
+            QCoreApplication::quit();
+        }
+    });
 }
