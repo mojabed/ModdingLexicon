@@ -38,7 +38,8 @@ public:
         FormattedDateRole,
         IconSourceRole,
         ApiVersionRole,
-        GameVersionRole
+        GameVersionRole,
+        StoredVersionRole
     };
     Q_ENUM(AddonRoles)
 

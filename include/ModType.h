@@ -46,8 +46,9 @@ struct ModInfo {
     int downloadsMonthly = 0;
     int favorites = 0;
     bool hasUpdate = false;
-    QString gameVersionStr;   // "name (version)" from gameconfig lookup
-    int maxApiVersion = 0;    // highest apiVersion from addons[]
+    QString storedVersion;   // version at install time
+    QString gameVersionStr;   // "name (version)"
+    int maxApiVersion = 0;
 
     mutable QString formattedDateCache;
     QString getFormattedDate() const {

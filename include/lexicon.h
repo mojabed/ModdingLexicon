@@ -46,6 +46,7 @@ public:
     Q_INVOKABLE void setAddonsPath(const QString& path);
     Q_INVOKABLE void cleanUnusedLibraries();
     Q_INVOKABLE void confirmCleanLibraries();
+    Q_INVOKABLE QString getInstalledVersionForAddon(const QString& modId) const;
     QString currentDescription() const { return m_currentDescription; }
     QString gameVersion() const { return m_gameVersion; }
     QString gameVersionName() const { return m_gameVersionName; }

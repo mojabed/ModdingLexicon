@@ -69,6 +69,8 @@ QVariant AddonModel::data(const QModelIndex& index, int role) const {
         return mod.maxApiVersion;
     case GameVersionRole:
         return mod.gameVersionStr;
+    case StoredVersionRole:
+        return mod.storedVersion;
     default:
         return QVariant();
     }
@@ -100,6 +102,7 @@ QHash<int, QByteArray> AddonModel::roleNames() const {
     roles[IconSourceRole] = "iconSource";
     roles[ApiVersionRole] = "apiVersion";
     roles[GameVersionRole] = "gameVersion";
+    roles[StoredVersionRole] = "storedVersion";
     return roles;
 }
 

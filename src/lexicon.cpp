@@ -251,7 +251,6 @@ QString Lexicon::getGameVersionForAddon(const QString& modId) const
 void Lexicon::updateMasterList() {
     QFile::remove(m_masterListPath);
     QUrl url("https://api.mmoui.com/v4/game/ESO/filelist.json");
-    spdlog::info("Starting master list download to: {}", m_masterListPath.toStdString());
     m_httpClient->addDownload(url, m_masterListPath);
 }
 
@@ -261,8 +260,6 @@ void Lexicon::updateCategoryList() {
 }
 
 void Lexicon::parseMasterList() {
-    spdlog::info("Parsing master list from: {}", m_masterListPath.toStdString());
-
     auto parseFuture = QtConcurrent::run([this]() -> QList<ModInfo> {
         QFile file(m_masterListPath);
         if (!file.open(QIODevice::ReadOnly)) {
@@ -571,7 +568,6 @@ void Lexicon::checkInstalledAddons() {
 }
 
 void Lexicon::onInstalledAddonsCheckFinished() {
-    // Migrate old hex checksums to version strings
     bool migrated = false;
     for (auto it = m_installedVersions.begin(); it != m_installedVersions.end(); ) {
         if (it.value().length() == 32 && !it.value().contains('.')) {
@@ -582,7 +578,6 @@ void Lexicon::onInstalledAddonsCheckFinished() {
         }
     }
     if (migrated) {
-        spdlog::info("Migrated old checksums to version strings");
         saveInstalledFolders();
     }
 
@@ -598,6 +593,12 @@ void Lexicon::onInstalledAddonsCheckFinished() {
 
     if (needSave)
         saveInstalledFolders();
+
+    for (ModInfo& mod : m_mods) {
+        mod.storedVersion.clear();
+        if (m_installedVersions.contains(mod.id))
+            mod.storedVersion = m_installedVersions[mod.id];
+    }
 
     m_addonModel->setMods(m_mods);
     m_installedAddonsFilter->refreshFilter();
@@ -1180,8 +1181,10 @@ void Lexicon::trackInstalledFolders(const QString& modId, const QStringList& bef
     saveInstalledFolders();
 
     for (ModInfo& mod : m_mods) {
-        if (mod.id == modId)
+        if (mod.id == modId) {
             mod.hasUpdate = false;
+            mod.storedVersion = mod.version;
+        }
     }
     m_addonModel->setMods(m_mods);
     m_installedAddonsFilter->refreshFilter();
@@ -1206,4 +1209,11 @@ void Lexicon::setAddonsPath(const QString& path)
 int Lexicon::availableUpdates() const
 {
     return m_availableUpdates;
+}
+
+QString Lexicon::getInstalledVersionForAddon(const QString& modId) const
+{
+    if (m_installedVersions.contains(modId))
+        return m_installedVersions[modId];
+    return QString();
 }

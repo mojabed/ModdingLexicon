@@ -423,27 +423,44 @@ Item {
                     }
                 }
 
-                // Update button
-                Text {
-                    id: updateBtn
-                    text: "Update"
-                    color: updMouse.containsMouse ? "#b39ddb" : "#666666"
-                    font.family: root.appFontFamily
-                    font.pixelSize: 12
-                    font.bold: true
+                // Update button + version info
+                Column {
                     visible: model.hasUpdate || false
                     anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
 
-                    MouseArea {
-                        id: updMouse
-                        anchors.fill: parent
-                        anchors.margins: -6
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (root.lexiconController)
-                                root.lexiconController.installAddon(model.modId, model.title, model.downloadUrl)
+                    Text {
+                        id: updateBtn
+                        text: "Update"
+                        color: updMouse.containsMouse ? "#b39ddb" : "#666666"
+                        font.family: root.appFontFamily
+                        font.pixelSize: 12
+                        font.bold: true
+                        anchors.horizontalCenter: parent.horizontalCenter
+
+                        MouseArea {
+                            id: updMouse
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (root.lexiconController)
+                                    root.lexiconController.installAddon(model.modId, model.title, model.downloadUrl)
+                            }
                         }
+                    }
+
+                    Text {
+                        text: {
+                            var stored = model.storedVersion || "?"
+                            var current = model.version || "?"
+                            return "v" + stored + " \u2192 v" + current
+                        }
+                        color: "#888888"
+                        font.family: root.appFontFamily
+                        font.pixelSize: 10
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
                 }
 

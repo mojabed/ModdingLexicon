@@ -32,6 +32,7 @@ ApplicationWindow {
     property string gameVersionLabel: ""
     property bool addonIsOutdated: false
     property bool addonHasUpdate: false
+    property string installedVersionStr: ""
 
     Timer {
         id: gameVersionPoller
@@ -39,12 +40,19 @@ ApplicationWindow {
         running: true
         repeat: true
         onTriggered: {
-            if (!detailWindow.gameVersionLabel && detailWindow.lexiconController && detailWindow.addonId) {
-                var gv = detailWindow.lexiconController.getGameVersionForAddon(detailWindow.addonId)
-                if (gv) {
-                    detailWindow.gameVersionLabel = "game version: " + gv
-                    var api = detailWindow.lexiconController.getAddonApiVersion(detailWindow.addonId)
-                    detailWindow.addonIsOutdated = (api > 0 && api < 101042) || api === 0
+            if (detailWindow.lexiconController && detailWindow.addonId) {
+                if (!detailWindow.gameVersionLabel) {
+                    var gv = detailWindow.lexiconController.getGameVersionForAddon(detailWindow.addonId)
+                    if (gv) {
+                        detailWindow.gameVersionLabel = "game version: " + gv
+                        var api = detailWindow.lexiconController.getAddonApiVersion(detailWindow.addonId)
+                        detailWindow.addonIsOutdated = (api > 0 && api < 101042) || api === 0
+                    }
+                }
+                if (!detailWindow.installedVersionStr) {
+                    var stored = detailWindow.lexiconController.getInstalledVersionForAddon(detailWindow.addonId)
+                    if (stored)
+                        detailWindow.installedVersionStr = stored
                 }
             }
         }
@@ -272,6 +280,20 @@ ApplicationWindow {
             color: "#8eb5d6"
             font.family: detailWindow.appFontFamily
             font.pixelSize: 13
+        }
+
+        // Update versions
+        Text {
+            visible: detailWindow.addonHasUpdate && detailWindow.installedVersionStr !== ""
+            text: {
+                var stored = detailWindow.installedVersionStr || "?"
+                var current = detailWindow.addonVersion || "?"
+                return "Installed: v" + stored + " \u2192 Latest: v" + current
+            }
+            color: "#b39ddb"
+            font.family: detailWindow.appFontFamily
+            font.pixelSize: 13
+            font.bold: true
         }
 
         // Outdated warning
