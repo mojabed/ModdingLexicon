@@ -386,7 +386,7 @@ Item {
                 }
 
                 Column {
-                    width: Math.max(0, parent.width - 48 - 110)
+                    width: Math.max(0, parent.width - 48 - (model.hasUpdate ? 92 : 0) - 50)
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 1
 
@@ -428,6 +428,7 @@ Item {
                     visible: model.hasUpdate || false
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
+                    width: 80
 
                     Text {
                         id: updateBtn
@@ -461,6 +462,9 @@ Item {
                         font.family: root.appFontFamily
                         font.pixelSize: 10
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
