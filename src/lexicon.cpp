@@ -799,11 +799,7 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
 
     if (depTitles.isEmpty()) {
         if (!optionalTitles.isEmpty()) {
-            QString modTitle;
-            for (const ModInfo& m : m_mods) { if (m.id == modId) { modTitle = m.title; break; } }
-            QTimer::singleShot(50, this, [this, modId, modTitle, optionalTitles]() {
-                emit optionalDependenciesPrompt(modId, modTitle, optionalTitles);
-            });
+            emitOptionalPrompt(modId, optionalTitles);
         } else {
             emit addonInstallFinished(modId);
         }
@@ -867,11 +863,7 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
 
     if (toInstall.isEmpty()) {
         if (!optionalTitles.isEmpty()) {
-            QString modTitle;
-            for (const ModInfo& m : m_mods) { if (m.id == modId) { modTitle = m.title; break; } }
-            QTimer::singleShot(50, this, [this, modId, modTitle, optionalTitles]() {
-                emit optionalDependenciesPrompt(modId, modTitle, optionalTitles);
-            });
+            emitOptionalPrompt(modId, optionalTitles);
         } else {
             emit addonInstallFinished(modId);
         }
@@ -888,11 +880,7 @@ void Lexicon::installDependenciesFor(const QString& modId, const QString& addons
     *installNext = [this, modId, sharedIdx, sharedList, installNext, optionalTitles]() {
         if (*sharedIdx >= sharedList->size()) {
             if (!optionalTitles.isEmpty()) {
-                QString modTitle;
-                for (const ModInfo& m : m_mods) { if (m.id == modId) { modTitle = m.title; break; } }
-                QTimer::singleShot(50, this, [this, modId, modTitle, optionalTitles]() {
-                    emit optionalDependenciesPrompt(modId, modTitle, optionalTitles);
-                });
+                emitOptionalPrompt(modId, optionalTitles);
             } else {
                 emit addonInstallFinished(modId);
             }
@@ -970,7 +958,6 @@ void Lexicon::uninstallAddon(const QString& modId, const QString& title)
         return;
     }
 
-    // Fallback: find the mod and match by addons[0].path or title
     const ModInfo* mod = nullptr;
     for (const ModInfo& m : m_mods) {
         if (m.id == modId) { mod = &m; break; }
@@ -1405,4 +1392,18 @@ void Lexicon::finishAddonInstall(const QString& modId)
 {
     refreshInstalledStatus();
     emit addonInstallFinished(modId);
+}
+
+QString Lexicon::modTitleById(const QString& id) const {
+    for (const ModInfo& m : m_mods) {
+        if (m.id == id) return m.title;
+    }
+    return {};
+}
+
+void Lexicon::emitOptionalPrompt(const QString& modId, const QStringList& titles) {
+    if (titles.isEmpty()) return;
+    QTimer::singleShot(50, this, [this, modId, t = modTitleById(modId), titles]() {
+        emit optionalDependenciesPrompt(modId, t, titles);
+    });
 }

@@ -102,6 +102,9 @@ private:
     void applyGameVersionsToMods();
     void checkInstalledAddons();
 
+    QString modTitleById(const QString& id) const;
+    void emitOptionalPrompt(const QString& modId, const QStringList& titles);
+
     void loadInstalledFolders();
     void saveInstalledFolders();
     void trackInstalledFolders(const QString& modId, const QStringList& before, const QStringList& after);
